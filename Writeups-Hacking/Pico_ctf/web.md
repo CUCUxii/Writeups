@@ -42,5 +42,10 @@ done
 [Cookie nº -> 18] 
 Flag: picoCTF{3v3ry1_l0v3s_c00k135_88acab36}
 ```
-
-
+Para practicar quise hacer el equivalente en python.
+```python
+for number in range(20):
+    req = requests.get("http://mercury.picoctf.net:6418/", cookies = {"name":str(number)})
+    if not "That is a cookie! Not very special though..." in req.text:
+        print(number)
+```
