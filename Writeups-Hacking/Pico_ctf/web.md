@@ -49,3 +49,14 @@ for number in range(20):
     if not "That is a cookie! Not very special though..." in req.text:
         print(number)
 ```
+--------------------------------------------------------------------
+
+## Insp3ct0r
+
+Aqui nos dan la web de alguien que acaba de empezar a programar "Mi primera web :)"
+COn el *curl* (viendo el codigo fuente) tenemos 1/3 de la flag -> ```picoCTF{tru3_d3``` Tambien nos dan rutas a su .js y su .css, que al verlas
+obetenemos el resto ```picoCTF{tru3_d3t3ct1ve_0r_ju5t_lucky?832b0699}```
+
+
+
+
