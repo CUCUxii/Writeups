@@ -13,8 +13,11 @@ Flag.pdf: 119: uudecode: not found
 ```
 Nos dicen que uudecode no se encuentra, lo mire en el codigo y le pasa a ese comando un texto encriptado. Ese comando tiene una descripcion en wikipedia.
 > UUEncode proviene de UNIX to Unix Encoding. Se trata de un algoritmo de codificación que transforma código binario en texto.
-Lo instale con ```sudo apt-get install sharutils```y corri el script de nuevo, ya no dio errores y creo un archivo "flag". El comando file dice que es 
-un archivo *ar*. Leyendo de wikipedia dice que es un formato de archivo comprimido y que fue sustituido por tar (similar a un zip)
+Lo instale con ```sudo apt-get install sharutils```y corri el script de nuevo, ya no dio errores y creo un archivo "flag". 
 
-Hice ```ar flag``` y me dio error por faltar parametros, di con que *x* es para descomprimir (y *v* verbose). ``` ar xv flag```
-Se creo otro archivo, un "cpio" (otro zip raro). Al ver sus parametros sale 
+Como consejo cuando sabes de que es un archivo, esta bien renombrarlo con su extension correspondiente.  
+
+**ar** -> El sistema creo un archivo *ar*. Leyendo de wikipedia dice que es un formato de archivo comprimido y que fue sustituido por tar (como un zip)
+Hice ```ar flag.ar``` y me dio error por faltar parametros, di con que *x* es para descomprimir (y *v* verbose). ``` ar xv flag.ar```  
+**cpio** ->  nuevo archivo, un "cpio" (otro zip raro). Lo renombro a ```flag.cpio``` asi que *--help* y luego ```cpio --file ./flag.cpio --extract```.
+
