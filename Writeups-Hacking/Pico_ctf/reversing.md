@@ -15,3 +15,20 @@ He utilizado un list comeprenesion (para ahorrarme bucles) que itera por cada ca
 Luego con el comando **xxd** de bash se traslada a ascii.
 
 ------------------------------------------------------------------
+
+## Crackme.py
+
+Nos dan un script de [python](https://mercury.picoctf.net/static/f440bf2510a28914afae2947749f2db0/crackme.py). 
+Tiene dos funciones, una para desenciptar un mensaje con rot47 (pero que no se llama en ningun momento) y otra (que si se llama) para preguntarle al 
+usuario dos numeros y decirle cual es el mas alto (inutil por ahora). Lo que hice fue eliminar esta ultima funcion y hacer una llamada a la buena 
+pasandole la varaible global del secreto ``` decode_secret(bezos_cc_secret) ```. Corri el programa y ya obtuve la flga.
+
+
+
+
+
+
+
+
+
+
