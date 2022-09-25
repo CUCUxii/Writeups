@@ -76,13 +76,6 @@ Si no quieres usar wireshark, la herramienta ```tcpflow -r captura.pcap``` te ha
 
 ------------------------------------------------
 
-## Torrent Analyze
-
-Nos dan otra captura.pcap Se supone que alguien ha bajado documentos por torrent. Abrimos la captura con wireshark y damos con muchos paquetes de datos
-UDP (por tanto el tcpflow aqui no nos puede ayudar mucho). En hints nos dicen de activar en "Analyze -> Enabled Protocols" bit torrent BT-DHT.
-
-
-
 
 
 
