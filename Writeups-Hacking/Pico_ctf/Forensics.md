@@ -33,11 +33,12 @@ chorrada. -> ```~:$ cat anthem-flag.txt | grep -oEn "picoCTF{.*?}" # -> (linea 9
 Nos dan una foto, si la abro sale com un circulo negro enorme con unos pequeños numeros. La flag tiene que estar en los metadatos, pero **exiftool**
 no me dice nada relevante mas que a parte de una foto es un **xml**. Una imagen es un archivo binario y si le haces cat te saldran caracteres ilegibles
 (el ascii de los bytes en hexadecimal), pero con este me sale un *xml* normal. COn **grep** busque la plaabra *pico* y no la encontre pero si un *}*.
-Abri el archivo con vim y encontre el resto de letras de la flag solo que separadas y entre lienas al lado de un patron "id=tspan".
+Abri el archivo con vim y encontre el resto de letras de la flag solo que separadas y entre lienas al lado de un patron "id=tspan". 
 ```console
 ~$: cat drawing.xml | grep -oE 'id="tspan.*?">.*?' | awk '{print $2}' FS=">" | sed 's/<\/tspan//g' | xargs | tr -d " "
 picoCTF{3nh4nc3d_24374675}
 ```
+> Esta todo/xml no era una foto hecha a partir de plasmarla en mapa de bits (o sea normal) sino a partir de unas instrucciones en xml de como crearla
 
 ------------------------------------------------
 
@@ -49,6 +50,45 @@ Ahi nos encontramos varios paquetes (5). Ignoramos los tres primeros (\[SYN], \[
 la conexion se ha podido establecer correctamnte por tcp. El quinto es para ver que la data se ha recibido correctamente. Nos interesa el 4º que son los
 datos en si (\[PSH-ACK]). En la seccion de "Data", nos sale el mensaje ne hexadecimal y ascii. "Ctrol Shif+o" y vemos el mensaje, la flag.
 *picoCTF{p4ck37_5h4rk_b9d53765}*
+
+------------------------------------------------
+
+## Redaction gone wrong
+
+Nos dan un pdf, lo he abierto con el navegador y el wrapper *file:\///rutaabolsuta* y sale un docoumento de un par de frases y unas cuantas tachadas en 
+negro (no se ven), estas he seleccionado el texto que dentro habia, lo he copiado y sale esto. 
+*"Breakdown  This is not the flag, keep looking picoCTF{C4n_Y0u_S33_m3_fully"* Le añadi un "}" más. Aun asi hay una utilidad llamada **pdftotext**
+que te puede extraer todo el texto, ya que si abres un pdf como un editor de texto te encontraras un formato ilegible.
+
+------------------------------------------------
+
+## Eavesdrop
+
+Nos dan otra vez una captura.pcap y hay que analizarla con el wireshark. ESta vez es una larga conversacion entre dos equipos de una misma red
+(10.0.2.4 y 10.0.2.15),  pongo *tcp* en el filtrador para eliminar ruido y le doy ctrol+dcho "seguir -> flujo TCP"  
+Es una conversacion entre dos personas donde se han pasado un paquete por el puerto 9002 (puede que usando netcat) y con este comando
+```openssl des3 -d -salt -in file.des3 -out file.txt -k supersecretpassword123```
+Si filtramos por ese puerto ("tcp.port eq 9002" en filtro) En el paquete \[PSH-ACK] tenemos la data "Salted__}..O.G....^..GZ	LbvbJ5eYm...R...,@.M.U.."
+hay que mostrarlo en formato Raw (o sea los bytes sin conversion ascii) y exportarlo (save as) con el nombre file.de. Aplicas el comando de arriba 
+sobre el archivo y tienes la flag. 
+
+Si no quieres usar wireshark, la herramienta ```tcpflow -r captura.pcap``` te hace todos estos pasos mas rapidamente.
+
+------------------------------------------------
+
+## Torrent Analyze
+
+Nos dan otra captura.pcap Se supone que alguien ha bajado documentos por torrent. Abrimos la captura con wireshark y damos con muchos paquetes de datos
+UDP (por tanto el tcpflow aqui no nos puede ayudar mucho). En hints nos dicen de activar en "Analyze -> Enabled Protocols" bit torrent BT-DHT.
+
+
+
+
+
+
+
+
+
 
 
 
