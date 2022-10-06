@@ -32,12 +32,12 @@ SELECT player FROM players WHERE country='Canada';
 La peticion se tramita tal que asi "POST a / -> 'username=cucuxii&country=Canada' -> redirect a /account.php" donde me setea una cookie como 
 "1a5bf49db4c2f7f4cf8f1645e1fd3cc5" (no parece base64 ni hexadecimal...)
 
-Intente formar un error sqli como "Canada'" y salio un error como este 
+Intente formar un error sqli como ```Canada'``` y salio un error como este 
 ```
 Fatal error: Uncaught Error: Call to a member function fetch_assoc() on bool in /var/www/html/account.php:33 Stack trace: #0 {main} thrown in 
 /var/www/html/account.php on line 33
 ``` 
-Investigue de que se trataba este error y sale porque se ha puesto mal una query sql. Si ponemos "' -- -" ya no sale porque se ha cerrado 
+Investigue de que se trataba este error y sale porque se ha puesto mal una query sql. Si ponemos ```' -- -``` ya no sale porque se ha cerrado 
 
 3. SQLI:
 ```' union select 1-- -``` devuelve 1 en la respuesa, o sea ya tenemos campo que explotar.  
