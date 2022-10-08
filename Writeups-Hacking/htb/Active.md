@@ -93,6 +93,9 @@ una copia del SYSVOL (al original no teniamos acceso pero a esto si). En este ar
 encriptada del administrador del sistema, (la encriptacion es AES-256, un algoritmo muy fuerte).
 El asunto esque si tenemos el hash (cpassword) en el groups.xml podemos romper dicho hash muy rapidamente con el 
 cmando gpp ya que microsoft publico la clave de dicho algoritmo en 2012. 
+> Algoritmo -> llave (en el script gpp-decrypt) + texto cifrado -> texto_descrifrado    
+>  key = "\x4e\x99\x06\xe8\xfc\xb6\x6c\xc9\xfa\xf4\x93\x10\x62\x0f\xfe\xe8\xf4\x96\xe8\x06\xcc\x05\x79\x90\x20\x9b\x09\xa4\x33\xb6\x6c\x1b"    
+>  texto_crifrado = campo cpassword del Groups.xml  
 
 ```console
 └─$ cd /Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/MACHINE/Preferences/Groups
