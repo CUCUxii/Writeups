@@ -16,7 +16,10 @@ Vamos a meter en el /etc/hosts el nombre Forge.htb.
 
 ### PARTE 2. SSRF
 
-Entramos y tenemos una galeria de fotos y una ruta para subir una imagen.
+Entramos y tenemos una galeria de fotos:
+![forge1](https://user-images.githubusercontent.com/96772264/197259772-e7ec0e1e-83aa-4fe6-975f-7042f5296bcc.png)
+
+Tambien una ruta para subir una imagen.
 Subimos la clásica shell.php  ```<?php echo "<pre>" . shell_exec($_REQUEST['cmd']) . "</pre>"; ?>``` y nos dan el enlace para visualizarlo:   ```http://forge.htb/uploads/lYl9YmpShrA2sOWeUw96``` Donde nos dicen que la foto no se puede visualizar y tiene errores.  
 El asunto esque se inutiliza la shell porque muestra su codigo y no lo interpreta. Al ponerle por tanto un parametro como ```?cmd=whoami``` da un error 404.   
 
@@ -24,6 +27,8 @@ La otra opcion que tenemos es la de subir una foto por una url. (No se puede sub
 tienen salida a internet).
 Como podemos meter una ruta,  a la que la web le hace una peticion, vamos a intentar un SSRF (mostrar urls de solo acceso interno, al ser la maquina la que hace la
 peticion, y no nadie de fuera, las deberia mostrar)
+
+![forge2](https://user-images.githubusercontent.com/96772264/197260837-9d7b9027-2708-4873-a246-cc4069401a13.png)
 
 Ponemos ```http://localhost``` y nos dice que esta whitelisteado. Si ponemos ```http://127.1``` (otra manera de referenciar al localhost, no hay  problema).
 Poniendo el nombre de la maquina ```http://forge.htb``` no, pero si cambiamos mayusculas por minusculas si ```http://ForGe.HtB```. 
