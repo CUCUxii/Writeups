@@ -137,7 +137,7 @@ Al puerto 22 solo se puede acceder por el proxy.
 Si hay que hacer pivoting, hay que detectar maquinas y demas, con esta shell limitada, el subir scripts se  hace impracticable. Asi que como tenemos la contraseña
 del Cobb este se usa para ssh.
 ```console
-└─$ sudo proxychains sshpass -p 'VwPddNh7xMZyDQoByQL4' ssh cobb@127.0.0.1
+└─$ sudo proxychains sshpass -p 'VwPddNh7xMZyDQoByQL4' ssh cobb@127.0.0.1  # No es el localhost sino el proxy.
 ```
 --------------------------------------------
 
@@ -203,7 +203,30 @@ Disclaimer: aprendi a resolver la maquina gracias al maestro @s4vitar.
 
 Es un proxy (un servidor intermediario entre el cliente-servidor). Suele operar en el puertp 3128:
 
-* Está para mejorar peticiones ya que guarda en la cache (memoria) un registro de todas estas:
+* Está para mejorar peticiones ya que guarda en la cache (memoria) un registro de todas estas:  
 > Cuando mucha gente haga las mismas peticiones, que en vez de responder una y otra vez saturando el servidor, se les manda la misma respuesta que se habia almacenado en dicha cache ) 
-* Tambien puede filtrar peticiones que detecte como *maliciosas* securizando el servidor (aunque en esta maquina securizar... poco)
+* Tambien puede filtrar peticiones que detecte como *maliciosas* securizando el servidor (aunque en esta maquina securizar... poco) 
+
+
+
+--------------------------------------------
+
+### EXTRA 2. Forward Shell Over TTY
+
+En la web hay reglas de firewall implementadas para que no se puedan enviar consolas interactivas una vez alguien haya conseguido la ejecucion de comandos (o sea
+en el web-dav vulnerable). Apenas podemos ejecutar ciertos comandos. 
+
+La solucion primera es hacer una *fake shell* o sea una manera de automatizar la parte de hacer la peticion al php malicioso que hemos subido con el web-dav y 
+leer su respuesta. Si encima codificamos los comandos en base64 por el camino para evitar conflicto con ciertos caracteres mejor.
+
+El asunto esque esta consola no guarda persistencia, es decir si cambias de directorio no registra ese cambio y te quedas donde estabas. Paea solucionar esto se
+aplica un truco de linux: *mkfifo*
+
+```console
+$: mkfifo input; tail -f input | /bin/sh 2>&1 > output
+$: echo whoami > input
+$: cat output  # root
+```
+Esto permite que se apliquen los cambios ya que la sesion se va almacenando todo el rato en este archivo *input/output* pudiendo crear una PTY o *pseudoterminal*.  
+Con este script: -> [tty over http](https://github.com/CUCUxii/ttyhttp.py/blob/main/ttyhttp.py)
 
