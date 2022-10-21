@@ -54,8 +54,8 @@ Hay como unas 3000 lineas del squid.conf, la mayoria comentadas, para quitarlas:
 ```cat ./squid.conf | grep -v "^#" | grep -ve '^$'```
 Pero no hay nada interesante. 
 En cuanto al archivo de apache nos da una ruta "AuthUserFile" /var/www/html/webdav_test_inception/webdav.passwd
-
 En ella hay una contraseña -> webdav_tester:$apr1$8rO7Smi4$yqn7H.GvJFtsTou1a7VME0
+> Web-dav: protocolo web para subir archivos, imitando al FTP/Samba
 
 ```console
 └─$ jhon password -w=/usr/share/wordlists/rockyou.txt
@@ -207,8 +207,6 @@ Es un proxy (un servidor intermediario entre el cliente-servidor). Suele operar 
 > Cuando mucha gente haga las mismas peticiones, que en vez de responder una y otra vez saturando el servidor, se les manda la misma respuesta que se habia almacenado en dicha cache ) 
 * Tambien puede filtrar peticiones que detecte como *maliciosas* securizando el servidor (aunque en esta maquina securizar... poco) 
 
-
-
 --------------------------------------------
 
 ### EXTRA 2. Forward Shell Over TTY
@@ -229,4 +227,10 @@ $: cat output  # root
 ```
 Esto permite que se apliquen los cambios ya que la sesion se va almacenando todo el rato en este archivo *input/output* pudiendo crear una PTY o *pseudoterminal*.  
 Con este script: -> [tty over http](https://github.com/CUCUxii/ttyhttp.py/blob/main/ttyhttp.py)
+
+--------------------------------------------
+
+### RESUMEN GRÁFICO
+
+![Inception](https://user-images.githubusercontent.com/96772264/197257158-f8e1c0d0-db6b-4c27-a1e5-4c892d4be444.png)
 
