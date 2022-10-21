@@ -1,8 +1,6 @@
 10.10.10.67
 -----------
 
-
-
 Los puertos abiertos son el 80(http) y el 3128(squid proxy).
 
 El proxy se configura de tal manera, retocando el /etc/proxychains.conf con la linea: ```http 10.10.10.67 3128```
