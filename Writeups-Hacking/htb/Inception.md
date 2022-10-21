@@ -232,5 +232,6 @@ Con este script: -> [tty over http](https://github.com/CUCUxii/ttyhttp.py/blob/m
 
 ### RESUMEN GRÁFICO
 
-![Inception](https://user-images.githubusercontent.com/96772264/197257158-f8e1c0d0-db6b-4c27-a1e5-4c892d4be444.png)
+![inception](https://user-images.githubusercontent.com/96772264/197257665-587f2ef8-1181-4159-90c5-3170087b049d.png)
+
 
