@@ -56,8 +56,8 @@ Pero tras un rato nada.
 En la seccion de comentarios hay ```<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->``` Pero la ruta "/js/Respond.js" da error 404.  
 
 Como no he podido fuzzear el Voting System (y para la ruta staging tambien), queda buscarle en el searchsploit.  
-```searchsploit Voting System``` Hay varios para autenticarse mediante SQLI, uno de ellos dice de poner.  
-```admin:' or ''='``` a */admin* pero no dio resultado. En cambio otro mas largo (php/webapps/49483.txt) Si va:  
+```searchsploit Voting System``` Hay varios para autenticarse mediante SQLI, uno de ellos dice de poner ```admin:' or ''='``` a */admin* pero no dio resultado.
+En cambio otro mas largo (php/webapps/49483.txt) Si va:  
 ```login=yea&password=admin&username=dsfgdf' UNION SELECT 1,2,"$2y$12$jRwyQyXnktvFrlryHNEhXOeKQYX7/5VK2ZdfB9f/GcJLuPahJWZ9K",4,5,6,7 from INFORMATION_SCHEMA.SCHEMATA;-- -```
 
 Lo del medio que envia parece un formato de hash a juzgar por los "$". Una vez en la web del Voting system tenemos que el usaurio se llama "Neovic Devierte" 
