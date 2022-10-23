@@ -19,9 +19,10 @@ Las conclusiones que nos da Nmap son estas:
  
 
 ### Puerto 80:
+```console
 └─$ whatweb http://10.10.10.239
 http://10.10.10.239 [200 OK] Apache[2.4.46], Bootstrap, Cookies[PHPSESSID], OpenSSL/[1.1.1j] PHP[7.3.27], IP[10.10.10.239], JQuery, PasswordField[password], Script, Title[Voting System using PHP]
-
+```
 ### Puerto 445 y 139:
 
 No podemos acceder sin creds a ninguno.
@@ -33,7 +34,6 @@ Cannot connect to server.  Error was NT_STATUS_ACCESS_DENIED
 ```
 ### Puerto 443 
 La web da forbidden, pero al tener ssl ```openssl s_client -connect love.htb:443``` obtenemos el mail de ```roy@love.htb```  
-  
 ```rpcclient -U "roy" 10.10.10.239 -N # NT_STATUS_LOGON_FAILURE```   
 Pero intentar bruteforcear la contraseña no da resultado: ```crackmapexec smb 10.10.10.239 -u "roy" -p /usr/share/wordlists/rockyou.txt```  
 
