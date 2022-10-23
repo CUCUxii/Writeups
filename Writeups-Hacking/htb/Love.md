@@ -57,7 +57,7 @@ En la seccion de comentarios hay ```<!-- WARNING: Respond.js doesn't work if you
 
 Como no he podido fuzzear el Voting System (y para la ruta staging tambien), queda buscarle en el searchsploit.  
 ```searchsploit Voting System``` Hay varios para autenticarse mediante SQLI, uno de ellos dice de poner.  
-```admin:' or ''='``` a */admin* pero no dio resultado. En cambio otro mas largo Si va:  
+```admin:' or ''='``` a */admin* pero no dio resultado. En cambio otro mas largo (php/webapps/49483.txt) Si va:  
 ```login=yea&password=admin&username=dsfgdf' UNION SELECT 1,2,"$2y$12$jRwyQyXnktvFrlryHNEhXOeKQYX7/5VK2ZdfB9f/GcJLuPahJWZ9K",4,5,6,7 from INFORMATION_SCHEMA.SCHEMATA;-- -```
 
 Lo del medio que envia parece un formato de hash a juzgar por los "$". Una vez en la web del Voting system tenemos que el usaurio se llama "Neovic Devierte" 
@@ -65,7 +65,7 @@ Lo del medio que envia parece un formato de hash a juzgar por los "$". Una vez e
 
 ![lovehtb_2](https://user-images.githubusercontent.com/96772264/197388822-dfcecd45-a2bf-449d-b0dc-9a3128dcfebf.PNG)
 
-Hay otro exploit que habla de un file upload en /candidates.php, no esta nada sanitizado, pero si intento subir algo me da problemas el campo de *Position*.     
+Hay otro exploit (49486.txt) que habla de un file upload en /candidates.php, no esta nada sanitizado, pero si intento subir algo me da problemas con *Position*.     
 
 ![lovehtb_3](https://user-images.githubusercontent.com/96772264/197388834-55fac078-1160-46fb-90d0-008d2d35d63c.PNG)
 
