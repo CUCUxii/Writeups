@@ -32,11 +32,10 @@ session setup failed: NT_STATUS_ACCESS_DENIED
 Cannot connect to server.  Error was NT_STATUS_ACCESS_DENIED
 ```
 ### Puerto 443 
-La web da forbidden, pero al tener ssl ```openssl s_client -connect love.htb:443``` obtenemos el mail de 
-roy@love.htb.
-
-```rpcclient -U "roy" 10.10.10.239 -N # NT_STATUS_LOGON_FAILURE```
-Pero intentar bruteforcear la contraseña no da resultado: ```crackmapexec smb 10.10.10.239 -u "roy" -p /usr/share/wordlists/rockyou.txt```
+La web da forbidden, pero al tener ssl ```openssl s_client -connect love.htb:443``` obtenemos el mail de ```roy@love.htb```  
+  
+```rpcclient -U "roy" 10.10.10.239 -N # NT_STATUS_LOGON_FAILURE```   
+Pero intentar bruteforcear la contraseña no da resultado: ```crackmapexec smb 10.10.10.239 -u "roy" -p /usr/share/wordlists/rockyou.txt```  
 
 -------------------------
 
