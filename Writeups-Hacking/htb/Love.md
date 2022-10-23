@@ -98,7 +98,7 @@ Subí el cmd.php y en la lista de Votantes me salió la foto (obviamente como es
 
 -------------------------
 
-# Parte 3: Accediento al sistema
+# Parte 3: Accediendo al sistema
 
 ¿Pero donde está la backdoor? Como se subió en el campo de *foto*, al darle a *copy image location*   
 ```http://love.htb/images/shell.php?cmd=whoami```
