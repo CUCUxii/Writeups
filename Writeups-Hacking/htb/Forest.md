@@ -1,5 +1,7 @@
 10.10.10.161 Forest
 
+![Forest](https://user-images.githubusercontent.com/96772264/197729882-1bf79eec-dd61-492b-9bc2-8e391c91515b.png)
+
 -------------------
 
 # Parte 1: Enumeración
@@ -128,8 +130,9 @@ El tema grupos es muy importante en directorio activo.
 ```console
 └─$ ldapdomaindump -u 'htb.local\svc-alfresco' -p 's3rvice' 10.10.10.161                                          
 [+] Domain dump finished
-
 ```
+
+![forest1](https://user-images.githubusercontent.com/96772264/197730044-8f4255c5-51e5-4ecb-b51c-67d55f5f91cd.PNG)
 En Remote Management Users están los de "Privileged IT Accounts" que a su vez están los de "Service Account" al
 que pertenecía nuestro usuario (por eso se pudo acceder al winrm).
 
@@ -151,9 +154,15 @@ En kali nos ponemos en escucha por python.
 *Evil-WinRM*> download C:\Users\svc-alfresco\Documents\20221024120749_BloodHound.zip data.zip
 ```
 
-Subimos esto a la herramienta y le marcamos a svc-alfresco como pwneado. En **Reachable hight value targets**
-nos dice que pertenece a Exchange Windows Permissions (o sea que tenemos el privilegio de cambiar los permisos
-a nuestro gusto, puediendo cambiar el Dacl y asi dumpear los hashes con el secresdump)
+Subimos esto a la herramienta y le marcamos a svc-alfresco como pwneado. Este es el esquema del dominio:
+
+![forest2](https://user-images.githubusercontent.com/96772264/197730405-e9d24640-fc28-4cf2-93a3-b643223a0236.PNG)
+
+En **Reachable hight value targets** nos dice que pertenece a Exchange Windows Permissions 
+(o sea que tenemos el privilegio de cambiar los permisos a nuestro gusto, puediendo cambiar el Dacl y asi dumpear los hashes con el secresdump)
+
+![forest3](https://user-images.githubusercontent.com/96772264/197730300-b9e73ef4-e73e-4b71-a843-2096ae972257.PNG)
+
 Para cierta funcion *Add-DomainObjectAcl* necesitamos este otro [script](https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1)
 
 ```console
