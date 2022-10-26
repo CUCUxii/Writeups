@@ -183,14 +183,55 @@ root
 
 # Extra: Analizando el codigo
 
+- **photos.php**
 ```php
 $path = '/var/www/html/uploads/';   // A partir de esta ruta
 $ignored = array('.', '..', 'index.html'); $files = array(); 
 foreach (scandir($path) as $file) {
   if (in_array($file, $ignored)) continue;  //toma cada archivo salvo '.' '..' e 'index'
   $files[$file] = filemtime($path. '/' . $file); }
+arsort($files);
+$files = array_keys($files);
+
+foreach ($files as $key => $value) {
+  $exploded  = explode('.',$value);
+  $prefix = str_replace('_','.',$exploded[0]);
+  $check = check_ip($prefix,$value);
+  if (!($check[0])) { continue; }; }
 ```
-Repliqué el codigo y me salió:
+- **lib.php**
+```php
+function getnameCheck($filename) {
+  $pieces = explode('.',$filename);
+  $name= array_shift($pieces);
+  $name = str_replace('_','.',$name);
+  $ext = implode('.',$pieces);
+  #echo "name $name - ext $ext\n";
+  return array($name,$ext);
+}
+
+function getnameUpload($filename) {
+  $pieces = explode('.',$filename);
+  $name= array_shift($pieces);
+  $name = str_replace('_','.',$name);
+  $ext = implode('.',$pieces);
+  return array($name,$ext);
+}
+
+function check_ip($prefix,$filename) {
+  //echo "prefix: $prefix - fname: $filename<br>\n";
+  $ret = true;
+  if (!(filter_var($prefix, FILTER_VALIDATE_IP))) {
+    $ret = false;
+    $msg = "4tt4ck on file ".$filename.": prefix is not a valid ip ";
+  } else {
+    $msg = $filename;
+  }
+  return array($ret,$msg);
+}
+```
+
+Repliqué parte del el codigo y me salió:
 ```php
 <?php
 $path = '/home/cucuxii/Maquinas/htb/Networked';
