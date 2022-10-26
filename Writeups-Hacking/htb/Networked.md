@@ -199,21 +199,6 @@ foreach ($files as $key => $value) {
 ```
 - **lib.php**
 ```php
-function getnameCheck($filename) {
-  $pieces = explode('.',$filename);
-  $name= array_shift($pieces);
-  $name = str_replace('_','.',$name);
-  $ext = implode('.',$pieces);
-  #echo "name $name - ext $ext\n";
-  return array($name,$ext);}
-
-function getnameUpload($filename) {
-  $pieces = explode('.',$filename);
-  $name= array_shift($pieces);
-  $name = str_replace('_','.',$name);
-  $ext = implode('.',$pieces);
-  return array($name,$ext);}
-
 function check_ip($prefix,$filename) {
   $ret = true;
   if (!(filter_var($prefix, FILTER_VALIDATE_IP))) {
@@ -221,8 +206,7 @@ function check_ip($prefix,$filename) {
   } else { $msg = $filename; }
   return array($ret,$msg); }
 ```
-
-Repliqué parte del el codigo y me salió:
+Repliqué el codigo de lib.php y me salió:
 ```php
 <?php
 $path = '/home/cucuxii/Maquinas/htb/Networked';
@@ -233,6 +217,8 @@ foreach (scandir($path) as $file) {
 print_r($files);
 ?>
 ```
+A parte de todo esto fatla la funcion chek_ip, pero basicamente comprueba que el nombre nuevo del archivo sea una ip (cuadro digitos hexadecimales 
+separados por puntos)
 ```console
 └─$ php prueba.php 
 Array
