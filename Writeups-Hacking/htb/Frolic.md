@@ -249,3 +249,5 @@ www-data@frolic:/tmp$ /home/ayush/.binary/rop $(python /tmp/exploit.py)
 # whoami
 root
 ```
+![frolicc](https://user-images.githubusercontent.com/96772264/198896653-be9c04d3-bf46-4fb1-901e-b45c94776a67.png)
+
