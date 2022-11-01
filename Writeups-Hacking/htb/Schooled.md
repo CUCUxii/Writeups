@@ -136,7 +136,7 @@ Y pones el comando para la reverse shell con los & urlencodeados a %26
 
 ---------------------------
 
-# Part 4: Accediendo al sisteam 
+# Part 4: Accediendo al sistema
 
 Tenemos una consola, pero no nos deja crear una tty ni hay curl o wget para subir un script de reconocimiento.
 ```console
