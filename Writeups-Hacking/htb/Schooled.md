@@ -87,8 +87,8 @@ Si ponemos esto en el */etc/hosts* y accedemos a ```http://staff.schooled.htb```
 
 No se que más hacer, en searchsploit hay muchas versiones del moodles, asi que hay que buscar su version.
 Si buscamos en google ```moodle RCE teacher``` leyendo resulta que en moodle hay que pasar de profesor a manager. 
-```moodle privilege escalation from teacher to manaher``` nos da a la vuln **CVE-2020-14321**, acabando en el 
-[exploit](https://github.com/HoangKien1020/CVE-2020-14321). Tiene un video de vimeo donde lo explica.
+```moodle privilege escalation from teacher to manaher``` nos da a la vuln **CVE-2020-14321**, acabando en este 
+[exploit](https://github.com/HoangKien1020/CVE-2020-14321), Tiene hasta un video de vimeo donde lo explica.
 
 ---------------------------
 
