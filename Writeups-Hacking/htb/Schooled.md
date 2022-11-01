@@ -191,7 +191,7 @@ HASH: $2a$05$MBCzKhG1KhezLh.0LRa0Kuw12nLJtpHy6DIaU.JAnqJUDYspHC.Ou
 
 # Part 5: Escalando a root
 
-Pero podemos hacer ssh -> ```ssh jamie@10.10.10.234````
+Pero podemos hacer ssh -> ```ssh jamie@10.10.10.234```
 ```console
 jamie@Schooled:/home $ sudo -l 
     (ALL) NOPASSWD: /usr/sbin/pkg update
