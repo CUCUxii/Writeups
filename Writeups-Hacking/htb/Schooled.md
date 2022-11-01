@@ -103,7 +103,9 @@ En ```http://schooled.htb/teachers.html``` dice que es manager asi que es está 
 En el exploit mencionan la ruta ```/enrol/manual/ajax.php``` La ruta nos dice que fatla el parametro id.
 
 En el video del repositorio hablan de en cursos, (en nuestro caso Matematicas) en la seccion de participantes, darle a **Enroll user** y escoger a Lianne, luego
-interceptar la peticion y cambiar estos parametros -> userlist de 25 a 24 (el id de nuestro Michael) y en role to assign 1, de administrador. 
+interceptar la peticion y cambiar estos parametros -> userlist de 25 a 24 (el id de nuestro Michael) y en role to assign 1, de administrador. Es decir, le 
+hemos dado el privilegio de administrador a nuestro profesor de cierta manera.
+
 ![schooled7](https://user-images.githubusercontent.com/96772264/199316599-ca0a6581-03d8-4eb3-9ee9-282f7f2cc6a2.PNG)
 ![schooled8](https://user-images.githubusercontent.com/96772264/199316614-08f3426a-93b5-4f7f-9212-fa237f3a52be.PNG)
 
