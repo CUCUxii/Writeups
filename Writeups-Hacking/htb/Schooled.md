@@ -118,11 +118,13 @@ En la seccion de Administracion, en Plugins no podemos subir nada.
 
 En la pagina del exploit de antes había una seccion que hablaba de permisos (payload to full permissions).  
 Lo que hay que hacer es irse a Users -> Permissions -> define roles -> Manager -> edit   
+  
+![schooled12](https://user-images.githubusercontent.com/96772264/199316890-c5531791-704c-482e-add2-d6b4bfcdd6bc.PNG)
+
 Ahi te salen todos los permisos, si le das a **save changes** interceptando la peticion y pones lo que sale en la web:  
 ```&return=manage&resettype=none&shortname=manager&name=&description=&archetype=manager&contextlevel10=0&n...```
-manteniendo la sesskey, podras editar los plugins.  
+manteniendo la sesskey, podras editar los plugins.
 
-![schooled12](https://user-images.githubusercontent.com/96772264/199316890-c5531791-704c-482e-add2-d6b4bfcdd6bc.PNG)
 ![schooled11](https://user-images.githubusercontent.com/96772264/199316809-ae59d9ca-b55f-4444-b81a-27d663505821.PNG)
 
 Te pide un zip, pero el repo del exploit también te lo da.
