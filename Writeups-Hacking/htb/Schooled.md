@@ -96,9 +96,10 @@ Si buscamos en google ```moodle RCE teacher``` leyendo resulta que en moodle hay
 
 Utilizamos todo el rato este [exploit](https://github.com/HoangKien1020/CVE-2020-14321)
 
-No sabemos quien es el manager, pero tenemos un listado de usaurios y la parte de ver usaurios:  
+No sabemos quien es el manager, pero tenemos un listado de usaurios y la parte de ver usaurios:    
 ```http://moodle.schooled.htb/moodle/user/profile.php?id=10``` -> cambiando el id podemos viajar entre usuarios. El 1 correspondiente a 1 no nos lo deja ver.
-Se supone que es el del manager. En ```http://schooled.htb/teachers.html``` dice que es manager asi que es está a quien hay que secuestrarle la sesión.
+Se supone que es el del manager.   
+En ```http://schooled.htb/teachers.html``` dice que es manager asi que es está a quien hay que secuestrarle la sesión.
 En el exploit mencionan la ruta ```/enrol/manual/ajax.php``` La ruta nos dice que fatla el parametro id.
 
 En el video del repositorio hablan de en cursos, (en nuestro caso Matematicas) en la seccion de participantes, darle a **Enroll user** y escoger a Lianne, luego
