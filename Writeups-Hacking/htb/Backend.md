@@ -74,7 +74,6 @@ Como nos da error porque faltan dos campos que si se están enviando, habra que 
 ```console
 └─$ curl -s -X POST http://10.10.11.161/api/v1/user/login -d "username=cucuxii&password=cucucxii123" 
 {"detail":"Incorrect username or password"}
-┌──(cucuxii㉿kali-xii)-[~/Maquinas/htb/Backend]
 └─$ curl -s -X POST http://10.10.11.161/api/v1/user/login -d "username=cucuxii@htb.local&password=cucucxii123"
 {"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNjY4MDkzMTI0LCJpYXQiOjE2Njc0MDE5MjQsInN1YiI6IjIiLCJpc19zdXBlcnVzZXIiOmZhbHNlLCJndWlkIjoiNDNjOTljOTAtZDBlNC00ZDVmLWIzODMtY2YyZTgyZGE2MjI0In0.ay1YLsGdoWBqF-DwBZfv9vo7zgUcxHEPh200zqBfmuI","token_type":"bearer"}
 ```
