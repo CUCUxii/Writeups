@@ -244,7 +244,7 @@ htb@BackendTwo:/etc/pam.d$ find / -name pam_wordle.so 2>/dev/null
 htb@BackendTwo:/etc/pam.d$ strings /usr/lib/x86_64-linux-gnu/security/pam_wordle.so | grep "/"
 /opt/.words
 ```
-Este archivo contiene 74 palabras de cinco letras
+Este archivo contiene 74 palabras de cinco letras. Si no existe la letra es un ?, si existe en otra posicion es *
 
 ```console
 --- Attempt 1 of 6 ---
@@ -257,8 +257,12 @@ Hint->?he??
 Word: shell
 Hint->?he?l
 ...
-Al final la palabra es wheel
+Al final la palabra es wheel, pero cada vez que se juega cambia
+User htb may run the following commands on backendtwo:
+    (ALL : ALL) ALL
 ```
+O sea **sudo su** y ya tenemos al root.
+
 
 
 
