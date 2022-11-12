@@ -119,9 +119,10 @@ Este secreto sirve para el server.py
 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFkbWluIn0.8JUBz8oy5DlaoSmr0ffLb_hrdSHl0iLMGz-Ece7VNtg'
 ```
 ![epsilon3](https://user-images.githubusercontent.com/96772264/201491434-b5cb84a6-b50a-4b3d-aad5-2ceeb7107052.PNG)
+![epsilon4](https://user-images.githubusercontent.com/96772264/201491443-f10663ed-7470-4782-8f8f-889dad5b7f09.PNG)
 
 Ahora podemos entrar en la ruta /order con POST -> costume=glasses&q=test&addr=test  
-![epsilon4](https://user-images.githubusercontent.com/96772264/201491443-f10663ed-7470-4782-8f8f-889dad5b7f09.PNG)
+
 ![epsilon5](https://user-images.githubusercontent.com/96772264/201491447-1b35ac7e-c60a-4686-98b8-6e770a0dd9f0.PNG)
 
 ---------------------------------
