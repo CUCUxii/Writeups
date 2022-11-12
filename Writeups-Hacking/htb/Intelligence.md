@@ -200,14 +200,13 @@ b5ce8b6b098f4b16facfb68f95a8a38f
 ----------------------------------
 ## Extra Registros DNS
 
-Los registros DNS (o archivos de zona) son archivos de instrucciones dentro de los servidores DNS que contienen
-información de un dominio (web), como su IP y su manera de gestionar las solicitudes.
+Los registros DNS (o archivos de zona) son archivos de instrucciones dentro de los servidores DNS que contienen información de un dominio (web), como su IP 
+y su manera de gestionar las solicitudes.  
 
-Estos registros son archivos de archivos de texto escritos en sintaxis DNS (un lenguaje propio de comandos que 
-le indica que hacer al DNS). 
-Todos los registros DNS tienen también un "TTL", que quiere decir "time-to-live" e indica con qué frecuencia el servidor DNS actualizará ese registro.
+Estos registros son archivos de archivos de texto escritos en sintaxis DNS (un lenguaje propio de comandos que le indica que hacer al DNS).   
+Todos los registros DNS tienen también un "TTL", que quiere decir "time-to-live" e indica con qué frecuencia el servidor DNS actualizará ese registro.  
 
-- Registro A: registro que contiene la dirección IP de un dominio, es el mas sencillo.
-- AAAA: igual pero para ipv6
+- Registro A: registro que contiene la dirección IP de un dominio, es el mas sencillo.  
+- AAAA: igual pero para ipv6  
 
 
