@@ -173,9 +173,10 @@ root@aragog:~# cat root.txt
 
 # Extra: Script en php hosts.php, subneteo.
 
+¿Que es el subneteo? [Aquí lo explico](https://github.com/CUCUxii/Investigacion/blob/main/Como-funciona/Teoria-redes.md)
+
 ```php
 <?php
-
     libxml_disable_entity_loader (false);
     $xmlfile = file_get_contents('php://input');
     $dom = new DOMDocument();
