@@ -3,7 +3,7 @@
 ![Querier](https://user-images.githubusercontent.com/96772264/202670219-d31b9300-527b-4c64-969f-b9527550057e.png)
 
 ----------------------
-# Part 1: Enmeración
+# Part 1: Enumeración
  
 Puertos abiertos 135(rpc),139,445(smb),1433,5985. Nmap nos dice que:  
 - 1433 -> puerto Microsoft SQL . Nombre del sistema QUERIER, Dominio HTB.LOCAL  
