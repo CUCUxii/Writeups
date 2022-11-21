@@ -43,6 +43,8 @@ Acabamos en el perfil de esta señora:
 En la 6ª foto (la del portatil) encontramos en pequeñito la FLAG
 ![osint2](https://user-images.githubusercontent.com/96772264/203130983-a5e72c65-a6e2-4d1f-aa9d-674bf8d9ebbe.PNG)
 
+Flag > "HTB{Y0ur_Enum3rat10n_1s_Str0ng_Y0ung_0ne}"  
+
 
 
 
