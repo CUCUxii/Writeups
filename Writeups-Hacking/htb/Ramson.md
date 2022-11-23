@@ -1,4 +1,7 @@
-10.10.11.153 - Ransom
+# 10.10.11.153 - Ransom
+
+![Ransom](https://user-images.githubusercontent.com/96772264/203621834-eef709f2-6609-4a6b-a485-643094927f8d.png)
+
 ---------------------
 
 # Part 1: Reconocimiento inicial 
@@ -31,13 +34,13 @@ En seguida el fuzzing nos cancelan
 ----------------------------
 # Part 2: PHP - Type Juggling
 
-El panel de login es 10.10.11.154/login, pero la peticion se pasa a /api/login. Las apis son una capa
-mas profunda de la web y que está oculta al usuario ya que están pensadas para los programas y la parte más 
-técnica, al ser algo oculto no suele estar tan protegido.
+![ransom1](https://user-images.githubusercontent.com/96772264/203621865-4272edb1-8b0a-42ec-83ae-24eb7242103a.PNG)
 
-En algunos casos un /login puede estar protegido antes ataques como SQLi o Type Juggling mientras que la api no.
+El panel de login es 10.10.11.154/login, pero la peticion se pasa a /api/login. Las apis son una capa mas profunda de la web y que está oculta al usuario ya que 
+están pensadas para los programas y la parte más técnica, al ser algo oculto no suele estar tan protegido.   
 
-En este caso pasa eso, teneos laravel, que trabaja con PHP, es vulnerable a php Type juggling:
+En algunos casos un /login puede estar protegido antes ataques como SQLi o Type Juggling mientras que la api no.  
+En este caso pasa eso, teneos laravel, que trabaja con PHP, es vulnerable a php Type juggling:  
 ```php
 php > if ("contraseña"=="contraseña") { echo "Correcto"; } else { echo "Incorrecto";}
 Correcto
@@ -50,17 +53,16 @@ Correcto
 php > if ("cucuxii"===true) { echo "Correcto"; } else { echo "Incorrecto";}
 Incorrecto
 ```
-Si ponemos en el navegador "true" no nos lo toma de manera correcta. Si miramos por el burpsuite, vemos que
-la peticion es a ```GET a /api/login?password="true"```
-Lo primero esque ya es un poco raro mandar una contraseña con GET (datos en la url).
-SI cambiamos a POST dice que no admite el metodo.
+Si ponemos en el navegador "true" no nos lo toma de manera correcta. Si miramos por el burpsuite, vemos que la peticion es a ```GET a /api/login?password="true"```  
+Lo primero esque ya es un poco raro mandar una contraseña con GET (datos en la url). SI cambiamos a POST dice que no admite el metodo.
 
-En cambio si mandamos un GET como si fuera un post o sea ```POST a /api/login  data=password="true"``` nos lo 
-pilla pero nos dice que faltan el campo contraseña. Cuando mandas algo pero se queja de que no los has mandado es
-porque no es el formato que quiere, por lo que hay que mandarlo como json:
+![ransom2](https://user-images.githubusercontent.com/96772264/203621895-64c435ac-80c4-4f35-8773-19d781263302.PNG)
+![ransom3](https://user-images.githubusercontent.com/96772264/203621900-b413f269-4600-44ed-9a97-9406af760400.PNG)
 
-La peticion sería asi (vemos que true se manda no como string sino como booleando (la diferencia son las ""))
-
+En cambio si mandamos un GET como si fuera un post o sea ```POST a /api/login  data=password="true"``` nos lo  pilla pero nos dice que faltan el campo contraseña.
+Cuando mandas algo pero se queja de que no los has mandado es porque no es el formato que quiere, por lo que hay que mandarlo como json:  
+  
+La peticion sería asi (vemos que true se manda no como string sino como booleando (la diferencia son las ""))  
 Si no disponemos de un entorno de pentesting avanzado con programas como burpsuite, se puede hacer con curl:
 
 ```console
@@ -71,18 +73,19 @@ Si no disponemos de un entorno de pentesting avanzado con programas como burpsui
 --cookie 'XSRF-TOKEN=eyJpdiI6Img4MWhKVFRreV...; laravel_session=eyJpdiI6IlZCdXcz...' \
 --data-binary $'{\"password\":true}' http://10.10.11.153/api/login
 ```
+![ransom4](https://user-images.githubusercontent.com/96772264/203621924-722b1fc8-6781-49c3-acdb-79bc8f30fcf6.PNG)
+
 ---------------------
 # Parte 3: Crackeando un Zip
 
-Una vez hecho esto, podemos visitar 10.10.11.153/ sin que nos redirija a login.
-
-Podemos bajarnos un zip pero está protegido con contraseña:
+Una vez hecho esto, podemos visitar 10.10.11.153/ sin que nos redirija a login.  
+Podemos bajarnos un zip pero está protegido con contraseña:  
 ```console
 └─$ unzip uploaded-file-3422.zip
 Archive:  uploaded-file-3422.zip
 [uploaded-file-3422.zip] .bash_logout password:
 ```
-Jhon the ripper tiene herramientas para romper muchos tipos de archivos:
+Jhon the ripper tiene herramientas para romper muchos tipos de archivos:  
 ```console
 └─$ locate 2john | grep "zip"
 /usr/sbin/zip2john
@@ -98,9 +101,9 @@ Jhon the ripper tiene herramientas para romper muchos tipos de archivos:
 └─$ 7z l uploaded-file-3422.zip -slt 
 # Información tecnica dice que el metodo de encriptacion es ZipCrypto Deflate
 ```
-Si buscas ```cracking zipcrypto deflate``` encontrarás una herramienta llamada [bkrack](https://github.com/kimci86/bkcrack)
+Si buscas ```cracking zipcrypto deflate``` encontrarás una herramienta llamada [bkrack](https://github.com/kimci86/bkcrack) 
 
-La herramienta bcrack nos pide que le demos un archivo que se parezca mucho a uno de los del zip encriptado.
+La herramienta bcrack nos pide que le demos un archivo que se parezca mucho a uno de los del zip encriptado.  
 En concreto sería ```/home/cucuxii/.bash_logout```
 
 ```console
@@ -130,12 +133,12 @@ ssh-rsa AAAAB3NzaC1yc2EA...13N6/M= htb@ransom
 ------------------------------
 # Parte 4: Escalando privilegios
 
-Entramos con un usaurio de bajos privilegios:
-- Grupos: groups=1000(htb),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),116(lxd)
-- Procesos: /usr/lib/udisks2/udisksd
-- Existe el archivo de configuracion de apache: /etc/apache2/sites-enabled/000-default.conf
+Entramos con un usaurio de bajos privilegios:  
+- Grupos: groups=1000(htb),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),116(lxd)  
+- Procesos: /usr/lib/udisks2/udisksd  
+- Existe el archivo de configuracion de apache: /etc/apache2/sites-enabled/000-default.conf  
 
-Al ser apache el archivo de configuracion 000-default:
+Al ser apache el archivo de configuracion 000-default:  
 ```console
 htb@ransom:/tmp$ cat /etc/apache2/sites-enabled/000-default.conf
 <VirtualHost *:80>
@@ -162,13 +165,11 @@ root
 ---------------------------
 # Extra: Analizando bckrack
 
-Mirando la documentación del repo pone que:
-- Está utilizando el ataque "Biham and Kocher's"
-- Los zips se suelen encriptar con el cifrado simetrico (una sola llave) basado en contraseña o "PKWARE/Zipcrypto"
+Mirando la documentación del repo pone que:  
+- Está utilizando el ataque "Biham and Kocher's"    
+- Los zips se suelen encriptar con el cifrado simetrico (una sola llave) basado en contraseña o "PKWARE/Zipcrypto"  
 
-Zipcrypto genera una cadena de bits random, en plan "23$(¡_.d" que se XORrea con el contenido de una entrada en
-texto plano para crear un texto cifrado
-
+Zipcrypto genera una cadena de bits random, en plan "23$(¡.d" que se XORrea con el contenido de una entrada en texto plano para crear un texto cifrado  
 La operacion XOR lo que hace es pasar todos los caracteres a binario y los compara de tal manera que si los bits son iguales da 0 y si son distintos 1:
 ```
 Cipher ->    0110101        Cipher    ->  0110101         Decipher  ->  1101001
@@ -176,9 +177,8 @@ key    ->    1011100        Decipher  ->  1101001         Key       ->  1011100
              -------                      --------                      --------
 Decipher ->  1101001        Key       ->  1011100         Cipher    ->  0110101 
 ```
-El texto cifrado de 32 bits se inicia con la contraseña y se va descrifrando con el "Biham and Kocher's"
-Este requiere que tengamos un texto de mas de 12 bytes que sea igual que el cifrado para sacar el patron de 
-cifrado que sirve para romperlo todo.
+El texto cifrado de 32 bits se inicia con la contraseña y se va descrifrando con el "Biham and Kocher's" 
+Este requiere que tengamos un texto de mas de 12 bytes que sea igual que el cifrado para sacar el patron de cifrado que sirve para romperlo todo.
 
 
 
