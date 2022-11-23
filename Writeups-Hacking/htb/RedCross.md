@@ -327,3 +327,5 @@ int main(int argc, char *argv[]){
     	if(isAction==2) printf("Network access restricted to %s\n",inputAddress);
     	if(isAction==3) puts("ERR: Function not available!\n");}
 ```
+
+Disclaimer: He podido aprender a hacer esta máquina gracias a **s4vitar** e **ippsec**
