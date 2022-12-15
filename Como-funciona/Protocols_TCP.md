@@ -69,6 +69,7 @@ fuente donde hay que poner (en concreto suelen ser los archivos CSS)
 
 Pero el usaurio solo ve una reducida parte de lo que se envía, es decir, los datos "usaurio" y "contraseña". Si interceptamos una petición con programas como burpsuite
 ![tcp4](https://user-images.githubusercontent.com/96772264/207856139-d6475ce2-4c2b-4c87-924a-9bfce0e30a87.PNG)
+
 Vemos que a parte de los datos, estamos mandando mas cosas como el tipo de petición (POST) el User Agent (programa para conectarnos), nuestra IP, el tamaño del
 contenido... Digamos que todo está simplificado para que se mande automaticamente y no resulte tedioso para el usaurio comun.
 
