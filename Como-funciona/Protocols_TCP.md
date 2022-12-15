@@ -41,21 +41,22 @@ checksum que opera con los bytes del mensaje para ver que no se han modificado l
 TCP antes de mandar los datos hace lo que se llama **handshake** o apreton de manos en tres pasos, para asegurarse de que se está manteniendo la conexión por ambas
 partes (cliente y servidor)
 **Reconocimiento:**  
-1. Cliente    ------------------> SYN ------------------>  Servidor    (DATOS: MAC, tipo (Ipv4 o Ipv6), IPs y puertos (cliente, servidor), protocolo (6 es TCP))   
-2. Cliente    <------------------ SYN,ACK <--------------  Servidor    (El servidor recibio la peticion)   
-3. Cliente    ------------------> ACK ------------------>  Servidor    (El cliente recibio el paquete)  
+
+1. Cliente    ------------------> SYN ------------------>  Servidor    (DATOS: MAC, tipo (Ipv4 o Ipv6), IPs y puertos (cliente, servidor), protocolo (6 es TCP))     
+2. Cliente    <------------------ SYN,ACK <--------------  Servidor    (El servidor recibio la peticion)    
+3. Cliente    ------------------> ACK ------------------>  Servidor    (El cliente recibio el paquete)   
 **Datos**   
-4. Cliente    <------------------ PSH,ACK <--------------  Servidor    (Los datos en si)  
-5. Cliente    ------------------> ACK ------------------>  Servidor    (El cliente recibio los datos)  
+4. Cliente    <------------------ PSH,ACK <--------------  Servidor    (Los datos en si)    
+5. Cliente    ------------------> ACK ------------------>  Servidor    (El cliente recibio los datos)    
 
 ![tcp5](https://user-images.githubusercontent.com/96772264/207855039-3337c2cd-2c3a-47a2-92c5-ea83510feac3.PNG)
 *Ejemplo de captura con wireshark, se ve como hay primero el handshake y luego se mandan los datos*
 
 El tamaño de cada paquete de datos (pareja de PSH,ACK y ACK) es limitado asi que si este es muy largo, se divide el mensaje en trozos y se manda esas partes.
 Por ultimo tenemos el cierre de la conexión, es decir el handshake de despedida.
-6. Cliente    ------------------> FIN,ACK -------------->  Servidor    (Cierro la conexion)
-4. Cliente    <------------------ FIN,ACK <--------------  Servidor    (Cierro la conexion)
-5. Cliente    ------------------> ACK ------------------>  Servidor    (Ok)
+6. Cliente    ------------------> FIN,ACK -------------->  Servidor    (Cierro la conexion)  
+4. Cliente    <------------------ FIN,ACK <--------------  Servidor    (Cierro la conexion)  
+5. Cliente    ------------------> ACK ------------------>  Servidor    (Ok)  
 
 ----------------------------------------
 # Protocolo HTTP:
