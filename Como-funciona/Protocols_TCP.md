@@ -5,10 +5,14 @@ Un protocolo es un conjunto de normas que siguen dos programas para comunicarse.
 
 En las conexiones entre sistemas, se utilizan puertos (para identificar que programa recibe que conexión) y direcciones IP (direccion del ordenador a donde mandar
 el mensaje). Todo esto se manda en "archivos socket" (En linux como ejemplo **/dev/tcp/10.10.10.43/80**) es decir el ordenador escribe en ese archivo socket y el
-sistema operativo se encarga de mandarlo a la dirección indicada.
-
-Los pasos de una conexión están ordenados en el modelo OSI, y va por capas, como una cebolla.
-
+sistema operativo se encarga de mandarlo a la dirección indicada. Todo esto lo hacen los programas automaticamente.
+```
+PAQUETE TCP
+  ORIGEN:10.10.10.10:5000    cadena "Hola Mundo"    DESTINO:10.10.20.20:5001
+```
+  
+Los pasos de una conexión están ordenados en el modelo OSI, y va por capas, como una cebolla.  
+```
 1. Application -> Comunicaciones entre aplicaciones que usan protocolos como HTTP o FTP y envian data legible  
 2. Presentation/Translation -> Data comprimida o encriptada que se envia por la red  
 3. Session -> se encarga del trafico de red, controla el "dialogo" (cuando se establece o termina una conexion)  
@@ -16,8 +20,8 @@ Los pasos de una conexión están ordenados en el modelo OSI, y va por capas, co
 5. Network -> manda (enruta) los paquetes a la IP destino, dichos paquetes estan fragmentados en trozos.  
 6. Data LINk -> transforma los paquetes a bits. Aqui se manejan las direcciones MACS.  
 7. Fisica -> topologia de una red (medios como conectores, cables... y sus detalles como voltajes, frecuencia...)  
-
-
+```
+  
 ----------------------------------------
 # Protocolo TCP
 El protocolo TCP (Protocolo de Control de Transmision) se usa para mandar datos (paquetes) via web. 
@@ -75,6 +79,12 @@ contenido... Digamos que todo está simplificado para que se mande automaticamen
 
 ![tcp7](https://user-images.githubusercontent.com/96772264/207856982-bf26c916-092f-4ec1-bf15-d66dafcbd2c5.PNG)
 *Aqui se ve lo mismo con el programa de Wireshark, ademas abajo del todo está como literalmente manda el sistema esto, por bytes*
+
+-------------------------------
+
+## HTTPS - 8080
+Version segura del HTTP, los datos estan encriptados por el certificado SSL. Pero hay sistemas que el SSL lo tienen autofirmado asi que es dudosamente seguro en esos
+casos.
 
 ------------------------------------------------------------
 
@@ -140,12 +150,6 @@ Si el ordenador (ej de una empresa) tiene el WinRM abierto, los empleados se pue
 IP y contraseña.
 
 No todos los usaurios de una red pueden conectarse a este equipo sino solo los que esten el en grupo especial "Remote Management Users"
-
-------------------------------------------------------------
-
-## HTTPS - 8080
-Version segura del HTTP, los datos estan encriptados por el certificado SSL. Pero hay sistemas que el SSL lo tienen autofirmado asi que es dudosamente seguro en esos
-casos.
 
 ------------------------------------------------------------
 
