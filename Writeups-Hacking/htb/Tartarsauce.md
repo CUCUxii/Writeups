@@ -4,21 +4,22 @@
 Puertos abiertos: 80(http) ```└─$ nmap -sCV -T5 -v -p- --open -Pn 10.10.10.88```
 
 Puerto 80 -> Apache httpd 2.4.18. Un robots.txt con las entradas:
-- /webservices/tar/tar/source/   
+- /webservices/tar/tar/source/     
 - /webservices/monstra-3.0.4/  
 - /webservices/easy-file-uploader/  
 - /webservices/developmental/  
 - /webservices/phpmyadmin/  
 
 Si buscamos la web por curl, vemos un dibujo ascii de un bote de salsa (tartara supongo) y nada más.
+![tartar2](https://user-images.githubusercontent.com/96772264/208294337-fdff2d43-655a-425b-ae1d-94ba29791094.PNG)
 
 - Busqueda por subdirectorios ```└─$ wfuzz -c --hw=53 -w $(locate subdomains-top1million-5000.txt) -H "Host: FUZZ.10.10.10.88" -u http://10.10.10.88/ -t 100```
-
 
 ## Monstra
 
 /webservices/monstra-3.0.4/
 Tiene varios botones pero ninguno es funcional.
+![tartar1](https://user-images.githubusercontent.com/96772264/208294326-7d6df51b-ea65-4395-b0d8-47c1b2e84b9b.PNG)
 
 Lo que si funciona es el boton de admin: /webservices/monstra-3.0.4/admin/
 Te sale un panel de autenticación. Puse admin:admin para ver como se tramitaba la petición pero entré por ser 
@@ -27,6 +28,7 @@ las credenciales correctas.
 Indagando por la web, encontré una zona para subir archivos, por lo que pensé en subir una php webshell, pero
 antes es ideal buscar en searchsploit **monstra 3.0.4**. Acabé dando con un exploit que me decía se subir la
 webshell con la extensión php7
+![tartar3](https://user-images.githubusercontent.com/96772264/208294308-34e6487e-b769-40d1-a7e6-a8badf34eeec.PNG)
 
 ```console
 └─$ cat cmd.php7
@@ -66,6 +68,8 @@ Hay un diccionario específico para ello:
 Antes de entrar a fondo con los plugins, si visitamos "http://10.10.10.88/webservices/wp/" nos encontramos con
 una web mal formateada, eso suele pasar por un problema del dns. SI hacemos un **curl** para ver el código fuente
 encontramos "src='http://tartarsauce.htb/"
+![tartar4](https://user-images.githubusercontent.com/96772264/208294347-d53247fb-5457-4707-b46d-52a35a3ca396.PNG)
+![tartar5](https://user-images.githubusercontent.com/96772264/208294351-e2055a2c-12a4-4e50-b0c8-bb541e751c87.PNG)
 
 Aun asi no hay nada interesante.
 
