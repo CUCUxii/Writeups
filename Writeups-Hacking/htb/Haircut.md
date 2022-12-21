@@ -1,4 +1,4 @@
-# 10.10.10.24
+# 10.10.10.24 - Haircut
 ![Haircut](https://user-images.githubusercontent.com/96772264/208973144-27038fbf-2387-42d5-bdbb-77d8a5a056ad.png)
 
 ------------
