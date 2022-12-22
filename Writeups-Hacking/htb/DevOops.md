@@ -1,7 +1,12 @@
 # 10.10.10.91 - DevOops
+![DevOops](https://user-images.githubusercontent.com/96772264/209209899-8e7383a6-6926-455a-9ee9-2dc94295d759.png)
+
 -----------------------
+# Part 1: Enumeración
 
 PUertos abiertos 22(ssh), 5000
+![devops1](https://user-images.githubusercontent.com/96772264/209209973-2424dce6-36ac-4436-bde3-7902ddc6abff.PNG)
+
 
 ```console
 └─$ curl -s http://10.10.10.91:5000
@@ -21,9 +26,14 @@ TODO: replace this with the proper feed from the dev.solita.fi backend.
 
 **/feed** -> nos muestra la misma foto que salia en el puerto 5000
 
-En **/uploads** nos piden un xml pero da "Internal server error"
+-----------------------
+# Part 2: XXE
 
-```xml
+En **/uploads** nos piden un xml con una estrcutura muy concreta:
+
+![devops2](https://user-images.githubusercontent.com/96772264/209210080-478618b2-c9b5-4690-8f7c-e9d00fae2e6c.PNG)
+
+```
 <?xml version="1.0" encoding="UTF-8"?>
 <elements>
     <Author>William Gibson</Author>
@@ -49,13 +59,15 @@ Si subimos un XML "muy especial" (inyeccion XXE)
 Conclusión: Usarios -> root git y roosa
 
 Como sabemos que existe el usuario roosa, podemos pedir su llave ```/home/roosa/.ssh/id_rsa```
-Y 
+
+![devops3](https://user-images.githubusercontent.com/96772264/209210104-bd404212-ea7e-4447-acd3-013be4e33aaf.PNG)
 
 ```console
 └─$ ssh -i id_rsa roosa@10.10.10.91
 ```
-
-```
+-----------------------
+# Part 3: En el sistema
+```console
 roosa@devoops:~$ cat run-blogfeed.sh
 #/bin/bash
 
@@ -64,8 +76,6 @@ roosa@devoops:~$ cat run-blogfeed.sh
 cd /home/roosa/work/blogfeed/src
 ../run-gunicorn.sh
 ```
-
-
 - Archivos que llaman la atencion: /home/roosa/deploy/src/app.py~ /home/roosa/service.sh 
 La "~" significa backup, con diff vemos las diferencias...
 ```console
