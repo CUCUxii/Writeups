@@ -129,7 +129,6 @@ Con todo esto se crea un archivo de credenciales:
 ```
 
 Con las credenciales de esta persona se puede acceder al panel de admin de antes gracias que arrastramos la cookie privilegiada  "PHPSESSID"  
-![streamIO_6](https://user-images.githubusercontent.com/96772264/206920959-2912cd42-9811-440a-9f10-0c0249f67574.PNG)
 
 -----------------------
 # Part 3: Explotación de PHPs
