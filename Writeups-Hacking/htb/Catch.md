@@ -107,6 +107,7 @@ Ningun mensaje interesante mas que que el admin se llama Lucas
 
 Con ssh la contraseña da acceso denegado pero para el cachet (puerto 8000 /auth/login) si que va.
 ![catch7](https://user-images.githubusercontent.com/96772264/210349647-e5ce57dd-8552-4ca3-9fd2-d792676889b8.PNG)
+![catch6](https://user-images.githubusercontent.com/96772264/210350443-734d26f6-645a-4f35-8448-69ec4f796db4.PNG)
 
 Busco ```Cachet exploits``` en google y doy con esta [web](https://www.sonarsource.com/blog/cachet-code-execution-via-laravel-configuration-injection/)
 que me habla de varios, entre ellos CVE-2021-39174. Busco ```CVE-2021-39174 Poc``` y doy con [este](https://github.com/n0kovo/CVE-2021-39174-PoC)
@@ -236,8 +237,11 @@ root
 
 # Extra: replicando el exploit.
 
-En la web, hay un panel de configuracion donde puedes cambiar cosas del email de cachet "/dashboard/settings/mail". Si en el campo config[mail_address] 
-le pones varaibles de entorno del tipo ${DB_HOST} te las filtra. He replicado el exploit que he encontrado reprogramandolo yo mismo.
+En la web, hay un panel de configuracion donde puedes cambiar cosas del email de cachet "/dashboard/settings/mail".
+![catch8](https://user-images.githubusercontent.com/96772264/210350588-79dee17e-cf89-4d4e-85f4-d7cd080ede1a.PNG)
+
+Si en el campo config[mail_address] le pones varaibles de entorno del tipo ${DB_HOST} te las filtra. He replicado el exploit que he encontrado reprogramandolo
+yo mismo.
 
 ```python
 import requests, re
