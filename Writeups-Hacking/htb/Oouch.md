@@ -99,7 +99,10 @@ El mecanismo Oauth se creó para que una web pueda acceder a información de otr
 le ha otorgado el usaurio. Por ejemplo conectar cuentas, intercambiar datos... Ese permiso o token, es limitado, 
 y tras de él, se envian esos datos sensibles.
 
-<-------- Diagrama ----------->
+![oauth2](https://user-images.githubusercontent.com/96772264/211315583-aeca7c92-cdc9-4797-9505-d7fbadbff16d.png)
+
+En la realidad esto se da mucho por ejemplo al entrar en una web con el clasico ¿Quieres registrarte con facebook? siendo facebook el auth server 
+(equivalente a authorization.oouch.htb) y la web (el euivalente a consumer.oouch.htb)
 
 ----------------------------- 
 
