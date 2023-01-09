@@ -113,15 +113,17 @@ aplicaciones
 	Registro: /signup
 ```
 Una vez nos registramos con cucuxii:contraseña123. Nos dan dos urls 
- - oauth/authorize
- - oauth/token
+![oouch4](https://user-images.githubusercontent.com/96772264/211310794-2857c75b-ee68-4e15-94de-eabefad178f2.PNG)
+
+ - **/oauth/authorize**
+ - **/oauth/token**
 Pero estan disfuncionales los dos. Si buscamos mas
 ```console
 └─$ wfuzz -t 200 --hc=404,400,502 -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://authorization.oouch.htb:8000/oauth/FUZZ
 000000672:   301        0 L      0 W        0 Ch        "applications"
 000018405:   301        0 L      0 W        0 Ch        "token"
 ```
- - applications nos piden creds.
+ - **/applications** nos piden creds.
 
 -------------------------------
 
@@ -130,7 +132,7 @@ Pero estan disfuncionales los dos. Si buscamos mas
 Si le damos otra vez a ```http://consumer.oouch.htb:5000/oauth/connect``` desde consumer.oouch.htb nos sale un panel de autorizacíon:
 ![oouch5](https://user-images.githubusercontent.com/96772264/211310584-5f6c1602-00f7-4d3b-b380-b65536a76616.PNG)
 
-Con burpsuite
+Con burpsuite interceptamos la petición:
 ```
 [Peticion 1 -> Darle a Fordward]
 POST /oauth/authorize/?client_id=UDBtC8HhZI18nJ53kJVJpXp4IIffRhKEXZ0fSd82&response_type=code&redirect_uri=http://consumer.oouch.htb:5000/oauth/connect/token&scope=read
