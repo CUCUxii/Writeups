@@ -1,4 +1,6 @@
 # 10.10.10.177 - Oouch
+![Oouch](https://user-images.githubusercontent.com/96772264/211310247-f87dfe13-6e39-4321-8e71-ef94d2e78ca1.png)
+
 -----------------------
 # Part 1: Reconocimiento inicial:
 
@@ -37,6 +39,9 @@ Inspeccionando el codigo fuente para buscar cosas ocultas nos encontramos con un
 ```<input id="csrf_token" name="csrf_token" type="hidden" value="IjExZWQ2YjFlN2FlNDhjYzg5MjI1...">```
 
 Nuestro usuario arrastra una cookie de sesion pero que al decodificarla en jwt.io da bytes sin sentido.
+![oouch2](https://user-images.githubusercontent.com/96772264/211310404-1bdd171f-1bae-45bd-9144-cb627a0eed3a.PNG)
+
+
 Si investigamos la web:  
 - /profile # Nos habla que no tenemos cuentas conectadas  
 - /password change # para cambiar la contraseña  
@@ -44,6 +49,8 @@ Si investigamos la web:
 - /about # Habla de un authorization server y un sistema de autorización a traves de varias aplicaciones.  
 - /contact # /POST a /contact con los datos {'textfield':'test', 'submit':'send'} y el csrf token.  
 - /password_change # POST con los datos 'opassword' (antigua contr.) 'npassword'(nueva) y 'cpassword'(nueva)  
+
+![oouch6](https://user-images.githubusercontent.com/96772264/211310657-3c29be7e-6898-488a-b143-145b8dbabc91.PNG)
 
 Como hay una seccion de contacto y una de cambiar la contraseña, podemos intentar cambiarsela a un posible admin.
 Si tramitamos la peticion de cambiar contraseña por bupsuite:
@@ -73,7 +80,6 @@ Si hacemos fuzzing con el diccionario de siempre no tendremos resultados, en cam
 └─$ wfuzz -t 200 --hc=404,400,502 -w /usr/share/seclists/Discovery/Web-Content/common.txt http://10.10.10.177:5000/FUZZ
 # 000002867:   302        3 L      24 W       247 Ch      "oauth"
 ```
-
 Este endpoint es de Oauth.
 ```
 Endopoint de Oauth
@@ -122,6 +128,8 @@ Pero estan disfuncionales los dos. Si buscamos mas
 # Part 3: Pentesting Oauth2 -> robo de cuenta
 
 Si le damos otra vez a ```http://consumer.oouch.htb:5000/oauth/connect``` desde consumer.oouch.htb nos sale un panel de autorizacíon:
+![oouch5](https://user-images.githubusercontent.com/96772264/211310584-5f6c1602-00f7-4d3b-b380-b65536a76616.PNG)
+
 Con burpsuite
 ```
 [Peticion 1 -> Darle a Fordward]
