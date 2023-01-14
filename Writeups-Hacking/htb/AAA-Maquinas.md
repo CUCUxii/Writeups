@@ -62,10 +62,11 @@
  - Inception -> Leak source - LFI - webdav - file upload - squid proxy - tty over http - pivoting 
  - Poison -> FreeBSD - LFI - VNC - Log Poisoning
  - Tartarsauce -> Wordpress (gwolle-plugin) - bash script exploitation 
+ - The Notebook -> JWT - File Upload - Docker exploit
+ - Catch -> Api - APK - Cachet CVE - bash script exploitation 
+ - Cronos -> Blind SQLi - OS command injection - cron exploitation
+ - DevOops -> XXE - Github repo
+ - Epsilon -> Github repo - AWS - STTI - bash script exploitation 
+ - Haircut -> SSRF - RFI - screen CVE
 
- - Epsilon
- - Haircut
- - Jerry
- - Lame
- - Bank
 
