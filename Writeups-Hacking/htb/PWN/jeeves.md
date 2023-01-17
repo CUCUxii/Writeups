@@ -26,7 +26,7 @@ zsh: segmentation fault  ./jeeves
 Pero aquí no hay que manipular el RIP sino sobreescribir una varaible...
 
 ------------------------
-Part 2: Leyendo su código
+# Part 2: Leyendo su código
 
 Si abrimos el programa con el ghidra y cambiando los nombres de varaibles:
 ```c
