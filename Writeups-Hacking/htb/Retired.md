@@ -441,12 +441,14 @@ dev@retired:~/emuemu$ getcap -r / 2>/dev/null /usr/bin/ping cap_net_raw=ep
 ```
 La capability se pasa sobre este "/usr/lib/emuemu/reg_helper" que a su vez como nos dice su código, llama a binfmt_misc.
 Una busqueda en google de dicha cosa (binfmt_misc) nos dice que:
- > binfmt_misc: binario de linux que permite que ciertos programas ejecuten otros con formatos raros, como emuladores y maquinas virtuales.
+ > binfmt_misc: binario de linux que permite que ciertos programas ejecuten otros con formatos raros, como emuladores y maquinas virtuales.  
+
 Este binario tiene un archivo de una sola linea llamado "register" que define que programa ejecuta que cosa:
 ```:nombre:tipo:offset:magic:mask:interprete:flags```
 Las opciones offset magic y mask son para el tipo si es "M" de magic number, el otro posible es "E" de extension, esta es la que usaremos, porque 
 es mas sencilla:
-> ":PWN:E::xii::/tmp/shell:C" -> Archivo "PWN" con la extension xii que ejecutara el programa /tmp/shell con la flag C (mantiene privilegios)
+> ":PWN:E::xii::/tmp/shell:C" -> Archivo "PWN" con la extension xii que ejecutara el programa /tmp/shell con la flag C (mantiene privilegios)  
+
 La idea seria escribirlo en "/proc/sys/fs/binfmt_misc/register" pero no nos deja, asi que lo hacemos en reg_helper que, repito, escribe 
 en "register" lo que se le pase por el stdin.
 ```
