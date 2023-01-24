@@ -141,6 +141,10 @@ Nuestro usaurio deply forma parte del grupo "docker" (comando ```id```)
 deploy@shoppy:/tmp$ docker images
 REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
 alpine       latest    d7d3d98c851f   6 months ago   5.53MB
+```
+La idea es crear un docker interactivo a partir de esa imagen al que montarle todo el sistema madre en una ruta para acceder a el por medio de 
+ese contenedor
+```
 deploy@shoppy:/tmp$ docker run -it -v /:/mnt/root --name cucuxii alpine
 / # cd mnt
 /mnt # ls
