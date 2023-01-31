@@ -1,5 +1,6 @@
 # 10.10.10.177 - Oouch
-![Oouch](https://user-images.githubusercontent.com/96772264/211310247-f87dfe13-6e39-4321-8e71-ef94d2e78ca1.png)
+![211315583-aeca7c92-cdc9-4797-9505-d7fbadbff16d](https://user-images.githubusercontent.com/96772264/215746420-c14f069a-00fb-4dd9-b185-571e5ebccc7e.png)
+
 
 -----------------------
 # Part 1: Reconocimiento inicial:
