@@ -46,10 +46,3 @@ Fragmentado    -> [Sistema Operativo] [ Vacio ] [ Peliculas ] [ Vacio ] [ Micros
 ```
 
 
-
-
-
-
-
-
-
