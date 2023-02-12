@@ -42,7 +42,7 @@ TCP antes de mandar los datos hace lo que se llama **handshake** o apreton de ma
 partes (cliente y servidor)
 **Reconocimiento:**  
 
-1. Cliente    ------------------> SYN ------------------>  Servidor    (DATOS: MAC, tipo (Ipv4 o Ipv6), IPs y puertos (cliente, servidor), protocolo (6 es TCP))     
+1. Cliente    ------------------> SYN ------------------>  Servidor    (DATOS: MAC, tipo (Ipv4 o Ipv6), IPs, puertos (de ambos lados), protocolo (6 TCP)
 2. Cliente    <------------------ SYN,ACK <--------------  Servidor    (El servidor recibio la peticion)    
 3. Cliente    ------------------> ACK ------------------>  Servidor    (El cliente recibio el paquete)   
 **Datos**    
