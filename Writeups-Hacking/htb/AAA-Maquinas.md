@@ -39,6 +39,7 @@
  - Nibbles
  - Bashed
  - Validation
+ - Shoppy -> NoSQLi - Docker - Analisis de binarios
 
 #### Media
  - Bolt -> dockerfile analysis - STTI - gpg in chrome 
@@ -68,5 +69,6 @@
  - DevOops -> XXE - Github repo
  - Epsilon -> Github repo - AWS - STTI - bash script exploitation 
  - Haircut -> SSRF - RFI - screen CVE
+ - Updown -> Github repo - .htaccess - File Upload (phar) - python2 - phpinfo - sudoers
 
 
