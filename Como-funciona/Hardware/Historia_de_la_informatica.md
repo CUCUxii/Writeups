@@ -18,6 +18,9 @@ Especificaciones -> 2 mhz y 8bits.
 - Puerto serie -> intermcabio de datos unidireccional
 - Puerto paralelo -> intermcabio de datos bidireccional
 
+### Lenguaje Basic 1975
+Creado por Bill Gates y Paul Allen
+
 -------------------------------------------------------------------
 # 1980s
 
@@ -26,7 +29,7 @@ Puerto ISA -> de 8 a 16 bits. Estandar de conexión.
 
 ### Estandar MDA - 1981
 Estaba pensado para monitores CRT de fosoforo verde monocromo. Había 4KB de memoria de video para imprimir 80 caracteres en pantalla y un chip ROM
-de 8Kb para almacenar 437 caracteres
+de 8Kb para almacenar 437 caracteres. 720×350 de resolucion.
 - **IBM MDA** -> Chip motorola 6845. Puertos: impresora, monitor y bus ISA. Tambien un reloj para sincronizar los ciclos con la CPU.   
 
 ### Estandar CGA - 1981
