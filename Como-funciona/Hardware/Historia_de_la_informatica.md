@@ -53,6 +53,34 @@ Le llega la imagen digital del chip y se la entrega al monitor convertida analó
 IBM saca el estandar XGA 1024x768 pero fracasa.  
 Asi que el VESA (video electronic standart assocaition) que saca el SVGA que es igual, con 8 bits de color por pixel (256 colores 16 bits)
 
+-------------------------------------------------------------------
+# 1990s
 
+### Puerto PCI - 1992
+Es mas pequeño y barato que su antecesor el puerto ISA. Ademas el multipropósito (sirve para poder conectar varios periféricos)
+
+> Año 1995 la explosión del 3D  
+
+### Aceleradora 3D - 1995
+Le quitaba trabajo al procesador de decodificacion de video para conseguir mas resolcuion y mejores efectos. 
+
+- **S3 Virge 4MB DRAM** -> procesaba en el mismo chip 2d y 3d. Resolucion de 640x480 y 800x600. 4Md de DRAM. Api S3D. Era un poco chusta porque iba peor que sin ella.
+
+### La guerra de las APIs - 1995
+Salieron muchas APIs para tarjetas graficas.
+Extintas -> OpenGL(Silicon Graphics - codigo libre), SD3, 3dfX
+Continuadas -> DirectX, Vulkan(AMD), Mantle(AMD)
+
+-------------------------------------------------------------------
+VBIOS -> donde se almacena el software de arranque de la gráfica antes de que arranque el propio SO  
+
+La DRAM (Dynamic RAM) es la memoria de la tarjeta gráfica. La CPU le manda los datos que ha recibido por el puerto PCI. Guarda texturas y mapas 3d.
+Necesita mucho ancho de banda que se lo da el bus y la tasa de refresco. Era muy barata. Es mas lenta que la SRAM o cache.
+Cada celda de la memoria tiene un trasnsistor y un capacitor para poder almacenar el 0 y el 1. Unos impulsores recargan por cada ciclo la información
+haciendo que no se pierda. Como estos ciclos dependen de que les llegue corriente todo el rato al apagarse se pierde todo, siendo volatil.
+
+Para evitar tener que programar un software para una tarjeta grafica mas un sistema operativo en concreto, y que se supiera comunicar con la gráfica 
+(cantidad de pixeles, resolucion, colores). La API era un interprete que podia hacer que un mismo programa funcionara para cualquier grafica.
+> Sofftware -> API -> driver de la grafica -> tarjeta gráfica  
 
 
