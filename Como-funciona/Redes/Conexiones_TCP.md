@@ -1,7 +1,5 @@
-# Investigacion: Protocolos de internet
+# Investigacion: Conexiones TCP
 
-----------------------------------------
-# Protocolo TCP
 El protocolo TCP (Protocolo de Control de Transmision) se usa para mandar datos (paquetes) via web. 
 
 1. Se encarga de comprobar que no se pierdan datos (paquetes) en el camino y valida siempre la conexión  
@@ -37,6 +35,8 @@ Por ultimo tenemos el cierre de la conexión, es decir el handshake de despedida
 5. Cliente    ------------------> ACK ------------------>  Servidor    (Ok)  
 
 ----------------------------------------
+Bajo TCP pueden operar ciertos protocolos como http, smb...
+
 # Protocolo HTTP:
 
 El protocolo HTTP va despúes del TCP, serían los datos en sí.
