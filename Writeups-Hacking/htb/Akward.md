@@ -252,7 +252,8 @@ directorios vacios. Queremos encontrar credenciales en ese mar de archivos.
 Corremos mi [script de reconocimiento](https://github.com/CUCUxii/Pentesting-tools/blob/main/lin_info_xii.sh), basicamente no encontramos nada
 interesante salvo que en esta ruta "/etc/nginx/conf.d/.htpasswd" encuentra las creds "admin:$apr1$lfvrwhqi$hd49MbBX3WNluMezyjWls1".
 Pero no hay manera de romperlas. Aun asi tenemos las de antes 'bean.hill:014mrbeanrules!#P' que probamos a ver si nos sirven en store.
-![Uploading awkward6.PNG…]()
+
+![awkward6](https://user-images.githubusercontent.com/96772264/221432974-095a4dd5-ae4a-46de-b2b2-48e3897999ec.PNG)
 
 ```console
 └─$ curl -s http://store.hat-valley.htb/ -u 'bean:014mrbeanrules!#P'
@@ -299,7 +300,9 @@ Es una web en produccion por lo que está en sus primeras fases de creación.
 
 En la web, si escojo un item y le doy a "añadir a la carta" se tramita esta peticion:
 ```/POST http://store.hat-valley.htb/cart_actions.php item=1&user=5315-735b-5b5-8ce2&action=add_item```
-![Uploading awkward7.PNG…]()
+
+![awkward7](https://user-images.githubusercontent.com/96772264/221432993-6c971b68-2a45-4af8-9986-2e66fdc23307.PNG)
+
 
 No tiene sentido hacer SQLi porque nos habian avisado que no existe tal. 
 Tampoco intentaremos hacer muchas inyecciones por el tema "badchars".
