@@ -44,15 +44,9 @@ Store es un nginx 1.18.0 pero que nos pide credenciales que no tenemos para acce
 
 ```console
 └─$ curl -s http://hat-valley.htb/js/app.js > app.js
-└─$ cat app.js | grep "\!\*\*\* \.\/" | sponge app.js
-# Eliminamos las lienas largas
-└─$ cat app.js | grep -vE "source|static"
-└─$ cat app.js | grep -vE "source|static" | grep -oP "./src/(.*?).vue" | sort -u
-./src/App.vue
-./src/Base.vue
-./src/Dashboard.vue
-./src/HR.vue
-./src/Leave.vue
+└─$ cat app.js | js-beautify | sed 's/\\n/\n/g' | sponge app.js
+└─$ cat app.js | grep "href"
+# encontramos la ruta ->  href: \"/hr\",
 ```
 La ruta "hr" tiene contenido, un panel de login.
 En la seccion de cookies (click derecho/inspect element/storage) hay un token cuyo valor es guest. 
