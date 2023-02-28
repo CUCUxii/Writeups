@@ -42,6 +42,7 @@ Estándar de IBM Enhanced Graphics Adapter -> colores sin restriccion (16 colore
 - **ATI EGA Wonder 800** -> GPU 10 Mhz, DRAM a 8Mhz. 256 Kb de memoria de video con un bus de 32 bits.
 
 ### Windows 1.0 - 1985
+Windows nace como una interfaz grafica para MS-DOS
 
 ### Estandar VGA - 1988
 Puerto VGA (15 pines) y sus estándares (min 256 Kb de VRAM) -> Resolucion de 640X480p a 16 colores y 320x200 a 256 colores
@@ -70,6 +71,9 @@ Le quitaba trabajo al procesador de decodificacion de video para conseguir mas r
 Salieron muchas APIs para tarjetas graficas.
 Extintas -> OpenGL(Silicon Graphics - codigo libre), SD3, 3dfX
 Continuadas -> DirectX, Vulkan(AMD), Mantle(AMD)
+
+### Windows 95
+Integra por fin el navegador web
 
 -------------------------------------------------------------------
 VBIOS -> donde se almacena el software de arranque de la gráfica antes de que arranque el propio SO  
