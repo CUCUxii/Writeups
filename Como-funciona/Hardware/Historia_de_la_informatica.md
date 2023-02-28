@@ -76,15 +76,12 @@ Continuadas -> DirectX, Vulkan(AMD), Mantle(AMD)
 Integra por fin el navegador web
 
 -------------------------------------------------------------------
-VBIOS -> donde se almacena el software de arranque de la gráfica antes de que arranque el propio SO  
+# 2000s
 
-La DRAM (Dynamic RAM) es la memoria de la tarjeta gráfica. La CPU le manda los datos que ha recibido por el puerto PCI. Guarda texturas y mapas 3d.
-Necesita mucho ancho de banda que se lo da el bus y la tasa de refresco. Era muy barata. Es mas lenta que la SRAM o cache.
-Cada celda de la memoria tiene un trasnsistor y un capacitor para poder almacenar el 0 y el 1. Unos impulsores recargan por cada ciclo la información
-haciendo que no se pierda. Como estos ciclos dependen de que les llegue corriente todo el rato al apagarse se pierde todo, siendo volatil.
+### Windows Server 2000
+Nace el Directorio Activo para ayudar a los sysadmins con latrasnferencia de archivos, encriptado de datos... Incluia tambien el 
+Microsoft Management Console (MMC) y volumenes dinamicos de disco. Se fue actualizando a Windows server 2003 (con firewall propio), 
+2008 (mejoras con la virtualizacion), Server 2012, 2016 y 2019
 
-Para evitar tener que programar un software para una tarjeta grafica mas un sistema operativo en concreto, y que se supiera comunicar con la gráfica 
-(cantidad de pixeles, resolucion, colores). La API era un interprete que podia hacer que un mismo programa funcionara para cualquier grafica.
-> Sofftware -> API -> driver de la grafica -> tarjeta gráfica  
 
 
