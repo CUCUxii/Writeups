@@ -9,6 +9,7 @@ el sistema operativo se encarga de mandarlo a la dirección indicada. Todo esto 
 PAQUETE TCP
   ORIGEN:10.10.10.10:5000    cadena "Hola Mundo"    DESTINO:10.10.20.20:5001
 ```
+------------------------------------------
 ## Modelo OSI
 
 Los pasos de una conexión están ordenados en el modelo OSI, y va por capas, como una cebolla.
@@ -26,5 +27,18 @@ Digamos que 192.168.0.1 se quiere comunicar con  192.168.0.2
 - 6. **Ethernet** -> Encapsula los paquetes con un principio y un fin convirtiendolos en tramas. Aqui se manejan las direcciones MAC.   
 - 7. **Physical** -> Manda los datos en bits por medios fisicos como cables... (controlando su voltajes, frecuencia...)  
 
+![OSI](https://user-images.githubusercontent.com/96772264/224501387-83dcd02d-4899-4fe5-8588-ac0f9318facc.png)
 
-![OSI](https://user-images.githubusercontent.com/96772264/221376050-d4cf83ff-56cb-4f8e-bac6-906a7643c1c2.png)
+------------------------------------------
+## Modelo TCP/ip
+
+Mientras que el OSI es un modelo de referencia, el TCP es el que se usa, mas que algo distinto es algo equivalente.
+1. Capa de aplicacion (equivale a aplicacion, trasnporte y sesion) -> Aplicaciones de red como SMTP, HTTP, SMB...
+2. Transporte (equivale a la de trasnporte) -> datos de enrutamiento (IP) y estado de la trasnmision (TCP, UDP)
+3. Internet (Network) -> proporciona el paquete de datos o datagrama. Maneja direcciones IP.
+4. Acceso (Ehternet y Fisica) -> se encarga de los medios fisicos y direcciones MAC, como se deben mandar segun el tipo de red.
+
+
+
+
+
