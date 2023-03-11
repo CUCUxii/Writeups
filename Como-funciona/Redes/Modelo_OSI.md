@@ -18,13 +18,13 @@ parte de la conexión (ejemplo una de las Ips, otra de los protocolos...).
 
 Digamos que 192.168.0.1 se quiere comunicar con  192.168.0.2
 
-- 1. **Application** -> Se encarga de los protocolos. Es decir cada aplicacion utiliza su protocolo (Firefox.exe utiliza http y https)  
-- 2. **Presentation/Translation** -> Se encarga del formato de archivo (ej PNG), su compresión y encriptacion (ej SSL)  
-- 3. **Session** -> se encarga del trafico de red, controla el "dialogo" (cuando se establece o termina una conexion) Tambien de la autenticacion  
-- 4. **Transport** -> ¿Como se mandan los paquetes? Pocos y ordenados (TCP) o muchos y rapido (UDP)  
-- 5. **Network** -> manda (enruta) los paquetes a la IP destino, dichos paquetes estan fragmentados en trozos.   
-- 6. **Ethernet** -> Aqui se manejan las direcciones MACS.   
-- 7. **Physical** -> Manda los datos en bits por medios como conectores, cables... (controlando su voltajes, frecuencia...)  
+- 1. **Application** -> Es con la que inberactua el usaurio, define los protocolos que usan las aplicaciones (Firefox.exe -> http y https) 
+- 2. **Presentation/Translation** -> Se encarga del formato de archivo (ej PNG), su compresión y encriptacion (ej SSL) traduce entre computadoras.
+- 3. **Session** ->  se encarga del trafico de red, controla el "dialogo" (cuando se establece o termina una conexion) Tambien de la autenticacion  
+- 4. **Transport** -> Controla el flujo de datos. Les pone una cabecera y los segmenta -> segmentos. Protocolos: TCP y UDP, Define los puertos logicos.
+- 5. **Network** -> (enruta) los paquetes a la IP destino, de la manera mas optima, y les pone mas cabeceras entre ellas las IPs -> paquetes.  
+- 6. **Ethernet** -> Encapsula los paquetes con un principio y un fin convirtiendolos en tramas. Aqui se manejan las direcciones MAC.   
+- 7. **Physical** -> Manda los datos en bits por medios fisicos como cables... (controlando su voltajes, frecuencia...)  
 
 
 ![OSI](https://user-images.githubusercontent.com/96772264/221376050-d4cf83ff-56cb-4f8e-bac6-906a7643c1c2.png)
