@@ -31,3 +31,37 @@ Siempre hay tres direcciones reservadas especiales: la primera para la red, la s
 - Todos los dispositivos van a salir por una unica IP publica
 - Si PC1 se quiere comunicar con PC2 lo hara por su red, mediante el switch
 - Si PC1 se quiere comunicar con PC5 lo hara por el router ya que son redes diferentes pero se comunican por la gateway.
+- En redes al siwitch y hub se les llama dominios del difusion mientras que los dispositivos finales (PCs) son los de colision.
+
+## Protocolo ARP
+Un equipo tiene dos direcciones, la IP(varaible) y la fisica o MAC(fija) que esta asociada a su tarjeta de red. Para realizar
+una conexion se necesitan ambas. Ahi entra en juego el protocolo ARP, que permite traducir entre direcciones IP y MAC dentro de una LAN.
+
+Cuando quiere saber la MAC de un dispositivo (ej PC 3 192.168.1.30) manda dicha IP a todos los dispositivos por la broadcast (192.168.1.255)
+y el que tenga esa IP le contesta con su MAC (es decir PC 3) Las respuestas se guardan en la tabla ARP para proximas veces.
+
+-----------------------------------
+## Enrutamiento
+
+Cuando un dispositivo de una LAN sale a internet, tiene que saber como llegar a la direccion destino. Para ello cuenta con su **tabla de rutas**
+que le indica el camino. 
+Si no lo sabe, le manda una peticion a la default gateway (o sea el router) que si que sabra como llegar. Eso se ve en la tabla de rutas como "0.0.0.0"
+
+La tabla de rutas no solo dice como llegar sino por que interfaz salir, cual es el camino mas rapido (metrica, siendo la mas baja mas rapida) y 
+cual es el siguiente salto.
+> camino mas rapido: redes mas pequeñas, añadidas manualmente (estaticas) y el protocolo de enrutamiento dinamico con la metrica mas baja.
+
+Un router solo conoce como llegar los routers mas proximos porque sus rutas se han configurado manualmente, pero tiene que conocer muchas mas rutas
+si quiere mandar el paquete con exito al destino. Para ello actualiza su tabla de rutas por medio de:
+ - Rutas estaticas: el administrador de redes las ha añadido manualmente, no varian y son mas seguras. No se anuncian ni propagan y consumen menos ancho de banda (recursos de red) por lo que son secretas para redes privadas. Aun asi son propensas a errores y mas dificiles de mantener.
+ - Rutas dinamicas: los routers que conocen rutas, se las mandan a otros routers constantemente, eso hace que se puedan actualizar rapidamente a cambios. Todo esto se realiza con los protocolos de routing dinamico (ripv2, ospf, bgpv, eigrp...)
+
+
+
+
+
+
+
+
+
+
