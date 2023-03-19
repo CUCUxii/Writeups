@@ -10,7 +10,6 @@ A nivel de IP operan ciertos protocolos o mecanismos:
 - El protocolo DNS: traduce IPs a nombres de dominio que se puedan recordar facilmente.
 
 --------------------------------------
-
 ## Tamaño de redes:
 
 La mascara de red permite saber el tamaño de una red:
@@ -23,3 +22,12 @@ Siempre hay tres direcciones reservadas especiales: la primera para la red, la s
 2. Esa diferencia si es 1 las IP van de 128 en 128, si es 2 de 64 en 64, si es 3 de 32 en 32...  128 > 64 > 32 > 16 > 8 > 4 > 2 > 1
 3. Una vez veas los tramos, ej de 32 en 32, hay que ver a que tramo pertenece.
   * Por ejemplo 10.0.85.136/18 -> es de 64 en 64 -> 0  > 64 (85) < 128 -> red 10.0.64.00 - broadcast -> 10.0.127.255
+
+--------------------------------------
+## Ejemplo de Red LAN:
+
+![red1](https://user-images.githubusercontent.com/96772264/226171431-80f87a21-2409-4cde-99f2-b2deaa8a21cc.png)
+
+- Todos los dispositivos van a salir por una unica IP publica
+- Si PC1 se quiere comunicar con PC2 lo hara por su red, mediante el switch
+- Si PC1 se quiere comunicar con PC5 lo hara por el router ya que son redes diferentes pero se comunican por la gateway.
