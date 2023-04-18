@@ -19,12 +19,12 @@ parte de la conexión (ejemplo una de las Ips, otra de los protocolos...).
 
 Digamos que 192.168.0.1 se quiere comunicar con  192.168.0.2
 
-- 1. **Application** -> Es con la que inberactua el usaurio, define los protocolos que usan las aplicaciones (Firefox.exe -> http y https) 
+- 1. **Application** -> Es con la que interactua el usaurio, define los protocolos que usan las aplicaciones (Firefox.exe -> http y https) 
 - 2. **Presentation/Translation** -> Se encarga del formato de archivo (ej PNG), su compresión y encriptacion (ej SSL) traduce entre computadoras.
-- 3. **Session** ->  se encarga del trafico de red, controla el "dialogo" (cuando se establece o termina una conexion) Tambien de la autenticacion  
-- 4. **Transport** -> Controla el flujo de datos y zu multiplexacion. Les pone una cabecera y los segmenta -> segmentos. Protocolos: TCP y UDP, Define los puertos logicos.
+- 3. **Session** ->  se encarga del trafico de red, controla el "dialogo" (cuando se establece o termina una conexion) Tambien de la autenticacion. Logs 
+- 4. **Transport** -> Controla el flujo de datos y su multiplexacion. Les pone una cabecera y los segmenta -> segmentos. Protocolos: TCP y UDP, Define los puertos logicos.
 - 5. **Network** -> (enruta) los paquetes a la IP destino, de la manera mas optima, y les pone mas cabeceras entre ellas las IPs -> paquetes.  
-- 6. **Ethernet** -> Encapsula los paquetes con un principio y un fin convirtiendolos en tramas. Aqui se manejan las direcciones MAC.   
+- 6. **Ethernet** -> Encapsula los paquetes con un principio y un fin convirtiendolos en tramas. Aqui se manejan las direcciones MAC. Deteccion de errores 
 - 7. **Physical** -> Manda los datos en bits por medios fisicos como cables... (controlando su voltajes, frecuencia...)  
 
 ![OSI](https://user-images.githubusercontent.com/96772264/224501387-83dcd02d-4899-4fe5-8588-ac0f9318facc.png)
