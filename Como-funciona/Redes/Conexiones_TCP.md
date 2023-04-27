@@ -74,6 +74,9 @@ El FTP puede ser un servidor especializado o un servicio corriendo en tu propio 
 ------------------------------------------------------------
 
 ## SSH - 22 
+
+![ssh](https://user-images.githubusercontent.com/96772264/234820040-84c37237-9ae2-4e77-975c-a7424fea9bc1.png)
+
 El servicio ssh te permite conectarte y manejar un ordenador remotamente bajo un usaurio. La conexion, a diferencia del Telnet esta encriptada.
 Con ssh se crea en el usuario actual una carpeta oculta llamda ".ssh" donde estan las llaves necesarias para conectarte. Si no quieres usar llaves te puedes 
 conectar por contraseña.
