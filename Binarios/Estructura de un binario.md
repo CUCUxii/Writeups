@@ -161,8 +161,7 @@ otro articulo)
 
 # La pila
 
-
-![Stack](https://user-images.githubusercontent.com/96772264/235513069-4452e576-ced8-4950-8f1b-1339816761f1.png)
+![Stack](https://user-images.githubusercontent.com/96772264/235513378-7ef51e84-3ca6-4b3a-852a-6e892bb49bc3.png)
 
 La pila es una memoria, es dónde un programa almacena varaibles, argumentos y más cosas que necestia para funcionar. 
 
